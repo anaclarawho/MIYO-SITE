@@ -12,12 +12,29 @@ const SERVICE_OPTIONS = [
   "Pintura",
   "Desembolo",
 ];
-const CLUBINHO_RULES = [
-  { key: "banho", label: "Banhos do mês", target: 4, service: "Banho" },
-  { key: "hidratacao", label: "Hidratação", target: 1, service: "Hidratação" },
-  { key: "escovacao", label: "Escovação dental", target: 1, service: "Escovação dental" },
-  { key: "tosa_higienica", label: "Tosa higiênica", target: 1, service: "Tosa higiênica" },
-];
+const CLUBINHO_PLANS = {
+  mensal: {
+    key: "mensal",
+    label: "Mensal",
+    cycleLabel: "mês",
+    bathSlots: 4,
+    intervalDays: null,
+    progressRules: [
+      { key: "banho", label: "Banhos do ciclo", target: 4, service: "Banho" },
+      { key: "hidratacao", label: "Hidratação", target: 1, service: "Hidratação" },
+      { key: "escovacao", label: "Escovação dental", target: 1, service: "Escovação dental" },
+      { key: "tosa_higienica", label: "Tosa higiênica", target: 1, service: "Tosa higiênica" },
+    ],
+  },
+  quinzenal: {
+    key: "quinzenal",
+    label: "Quinzenal",
+    cycleLabel: "quinzena",
+    bathSlots: 2,
+    intervalDays: 15,
+    progressRules: [{ key: "banho", label: "Banhos do ciclo", target: 2, service: "Banho" }],
+  },
+};
 const STATUS_LABELS = {
   agendado: "Agendado",
   confirmado: "Confirmado",
@@ -46,19 +63,34 @@ const DOM = {
   cloudLaunchButton: document.querySelector("#cloudLaunchButton"),
   appointmentForm: document.querySelector("#appointmentForm"),
   appointmentPetId: document.querySelector("#appointmentPetId"),
+  appointmentPetPreview: document.querySelector("#appointmentPetPreview"),
   appointmentDate: document.querySelector("#appointmentDate"),
   appointmentTime: document.querySelector("#appointmentTime"),
+  appointmentAmountField: document.querySelector("#appointmentAmountField"),
+  appointmentClubinhoToggleWrap: document.querySelector("#appointmentClubinhoToggleWrap"),
+  appointmentClubinhoInput: document.querySelector("#appointmentClubinhoInput"),
+  appointmentClubinhoFields: document.querySelector("#appointmentClubinhoFields"),
+  appointmentClubinhoSlot: document.querySelector("#appointmentClubinhoSlot"),
+  appointmentClubinhoAmountHint: document.querySelector("#appointmentClubinhoAmountHint"),
   agendaDateFilter: document.querySelector("#agendaDateFilter"),
   agendaSearchInput: document.querySelector("#agendaSearchInput"),
   agendaRangeLabel: document.querySelector("#agendaRangeLabel"),
   agendaSummaryGrid: document.querySelector("#agendaSummaryGrid"),
   agendaScopeButtons: [...document.querySelectorAll("[data-agenda-scope]")],
   servicePicker: document.querySelector("#servicePicker"),
+  serviceSelectInput: document.querySelector("#serviceSelectInput"),
+  serviceAddButton: document.querySelector("#serviceAddButton"),
+  selectedServices: document.querySelector("#selectedServices"),
   petForm: document.querySelector("#petForm"),
   petFormTitle: document.querySelector("#petFormTitle"),
   petFormSubmitButton: document.querySelector("#petFormSubmitButton"),
   petFormCancelButton: document.querySelector("#petFormCancelButton"),
   petRegistrationDate: document.querySelector("#petRegistrationDate"),
+  petClubinhoInput: document.querySelector("#petClubinhoInput"),
+  petClubinhoFields: document.querySelector("#petClubinhoFields"),
+  petClubinhoPlan: document.querySelector("#petClubinhoPlan"),
+  petClubinhoPrice: document.querySelector("#petClubinhoPrice"),
+  petClubinhoAdhesionDate: document.querySelector("#petClubinhoAdhesionDate"),
   petsSearchInput: document.querySelector("#petsSearchInput"),
   clubinhoSearchInput: document.querySelector("#clubinhoSearchInput"),
   cloudConfigForm: document.querySelector("#cloudConfigForm"),
@@ -89,6 +121,7 @@ const state = {
   selectedPetId: null,
   editingPetId: null,
   agendaScope: "day",
+  selectedServiceItems: [],
 };
 
 function emptyDb() {
@@ -232,6 +265,20 @@ function formatLongDate(value) {
   }).format(new Date(value));
 }
 
+function asDateOnly(value) {
+  if (!value) return new Date(`${todayKey()}T12:00:00`);
+  return new Date(String(value).includes("T") ? value : `${value}T12:00:00`);
+}
+
+function clubinhoPlanConfig(planKey) {
+  return CLUBINHO_PLANS[planKey] || CLUBINHO_PLANS.mensal;
+}
+
+function addPlanInterval(value, planKey, amount = 1) {
+  const plan = clubinhoPlanConfig(planKey);
+  return plan.intervalDays ? addDays(value, plan.intervalDays * amount) : addMonths(value, amount);
+}
+
 function agendaRange(anchorValue = DOM.agendaDateFilter?.value || todayKey(), scope = state.agendaScope) {
   const anchor = anchorValue ? new Date(`${anchorValue}T12:00:00`) : new Date();
   let start;
@@ -306,6 +353,9 @@ function seedDemoData() {
         breed: "Shih-tzu",
         registration_date: todayKey(),
         clubinho_enabled: true,
+        clubinho_plan: "mensal",
+        clubinho_price: 220,
+        clubinho_adhesion_date: todayKey(),
         notes: "Pele sensível no abdômen.",
         created_at: now.toISOString(),
       },
@@ -317,6 +367,9 @@ function seedDemoData() {
         breed: "Spitz",
         registration_date: todayKey(),
         clubinho_enabled: false,
+        clubinho_plan: null,
+        clubinho_price: null,
+        clubinho_adhesion_date: null,
         notes: "Ansioso no secador.",
         created_at: now.toISOString(),
       },
@@ -328,8 +381,9 @@ function seedDemoData() {
         appointment_at: todayMorning.toISOString(),
         status: "confirmado",
         service_items: ["Banho", "Hidratação"],
-        amount: 95,
-        clubinho_slot: "2º banho do mês com hidratação",
+        amount: 220,
+        is_clubinho: true,
+        clubinho_slot: "2º banho do ciclo",
         notes: "Atendimento do clubinho.",
         created_at: now.toISOString(),
       },
@@ -340,6 +394,7 @@ function seedDemoData() {
         status: "agendado",
         service_items: ["Banho", "Desembolo"],
         amount: 120,
+        is_clubinho: false,
         notes: "Pedir cuidado com nós atrás da orelha.",
         created_at: now.toISOString(),
       },
@@ -349,7 +404,9 @@ function seedDemoData() {
         appointment_at: tomorrow.toISOString(),
         status: "agendado",
         service_items: ["Banho"],
-        amount: 80,
+        amount: 220,
+        is_clubinho: true,
+        clubinho_slot: "3º banho do ciclo",
         notes: "",
         created_at: now.toISOString(),
       },
@@ -378,6 +435,12 @@ function normalizeDb(raw) {
       tutor_contact: pet.tutor_contact || tutor.phone || tutor.email || "",
       registration_date: pet.registration_date || localDateKeyFromValue(pet.created_at || new Date().toISOString()),
       clubinho_enabled: Boolean(pet.clubinho_enabled ?? clubinhoPetIds.has(pet.id)),
+      clubinho_plan: pet.clubinho_enabled ? pet.clubinho_plan || "mensal" : pet.clubinho_plan || null,
+      clubinho_price: pet.clubinho_price ?? null,
+      clubinho_adhesion_date:
+        pet.clubinho_adhesion_date
+        || pet.registration_date
+        || localDateKeyFromValue(pet.created_at || new Date().toISOString()),
       notes: pet.notes || "",
     };
   });
@@ -394,6 +457,7 @@ function normalizeDb(raw) {
       status: appointment.status || "agendado",
       service_items: migratedServices,
       amount: appointment.amount ?? null,
+      is_clubinho: Boolean(appointment.is_clubinho ?? appointment.clubinho_slot),
       clubinho_slot: appointment.clubinho_slot || null,
       notes: appointment.notes || "",
     };
@@ -634,6 +698,7 @@ function filteredAppointments() {
       pet?.name,
       pet?.tutor_name,
       item.service_items?.join(" "),
+      item.clubinho_slot,
       item.notes,
       formatDate(item.appointment_at),
       weekdayLabel(item.appointment_at),
@@ -642,16 +707,57 @@ function filteredAppointments() {
   });
 }
 
-function clubinhoAppointmentsInMonth(petId, referenceDate = new Date()) {
+function clubinhoCycleForPet(pet, referenceDate = new Date()) {
+  if (!pet?.clubinho_enabled) return null;
+  let start = asDateOnly(pet.clubinho_adhesion_date || pet.registration_date || todayKey());
+  let end = addPlanInterval(start, pet.clubinho_plan, 1);
+  const reference = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+
+  while (reference >= end) {
+    start = end;
+    end = addPlanInterval(start, pet.clubinho_plan, 1);
+  }
+
+  while (reference < start) {
+    end = start;
+    start = addPlanInterval(start, pet.clubinho_plan, -1);
+  }
+
+  return {
+    start,
+    end,
+    label: `${formatDate(start.toISOString())} até ${formatDate(addDays(end, -1).toISOString())}`,
+  };
+}
+
+function clubinhoAppointmentsInCycle(pet, referenceDate = new Date()) {
+  const cycle = clubinhoCycleForPet(pet, referenceDate);
+  if (!cycle) return [];
+
   return state.data.appointments.filter((item) => {
-    if (item.pet_id !== petId) return false;
-    return monthKey(item.appointment_at) === monthKey(referenceDate);
+    if (item.pet_id !== pet.id || !item.is_clubinho) return false;
+    const date = new Date(item.appointment_at);
+    return date >= cycle.start && date < cycle.end;
   });
 }
 
-function clubinhoProgress(petId, referenceDate = new Date()) {
-  const items = clubinhoAppointmentsInMonth(petId, referenceDate);
-  const progress = CLUBINHO_RULES.map((rule) => {
+function clubinhoProgress(petOrId, referenceDate = new Date()) {
+  const pet = typeof petOrId === "string" ? getPet(petOrId) : petOrId;
+  if (!pet) {
+    return {
+      pet: null,
+      plan: clubinhoPlanConfig("mensal"),
+      cycle: null,
+      items: [],
+      progress: [],
+      bathDone: 0,
+    };
+  }
+
+  const plan = clubinhoPlanConfig(pet.clubinho_plan);
+  const cycle = clubinhoCycleForPet(pet, referenceDate);
+  const items = clubinhoAppointmentsInCycle(pet, referenceDate);
+  const progress = plan.progressRules.map((rule) => {
     const done = items.filter((item) => item.service_items?.includes(rule.service)).length;
     return {
       ...rule,
@@ -661,23 +767,29 @@ function clubinhoProgress(petId, referenceDate = new Date()) {
   });
 
   return {
+    pet,
+    plan,
+    cycle,
     items,
     progress,
     bathDone: progress.find((item) => item.key === "banho")?.done || 0,
   };
 }
 
-function clubinhoHeadline(petId) {
-  const summary = clubinhoProgress(petId);
-  return `${summary.bathDone}/4 banhos realizados neste mês`;
+function clubinhoHeadline(petOrId) {
+  const summary = clubinhoProgress(petOrId);
+  return `${summary.bathDone}/${summary.plan.bathSlots} banhos neste ciclo`;
 }
 
-function renderClubinhoProgress(petId) {
-  const summary = clubinhoProgress(petId);
+function renderClubinhoProgress(petOrId) {
+  const summary = clubinhoProgress(petOrId);
 
   return `
     <div class="clubinho-progress">
-      <span class="mini-label">Clubinho MIYO do m\u00eas</span>
+      <div class="clubinho-progress-head">
+        <span class="mini-label">Clubinho ${escapeHtml(summary.plan.label)}</span>
+        <span class="muted">${escapeHtml(summary.cycle?.label || "Ciclo atual")}</span>
+      </div>
       <div class="clubinho-progress-grid">
         ${summary.progress.map((item) => {
           const className = ["clubinho-slot", item.complete ? "is-done" : ""]
@@ -715,26 +827,104 @@ function futureAppointments(limit = 6) {
 }
 
 function renderServicePicker(selectedItems = []) {
-  DOM.servicePicker.innerHTML = SERVICE_OPTIONS.map((service) => {
-    const checked = selectedItems.includes(service) ? "checked" : "";
-    return `
-      <label class="service-option">
-        <input type="checkbox" name="service_items" value="${escapeHtml(service)}" ${checked}>
-        <span>${escapeHtml(service)}</span>
-      </label>
-    `;
-  }).join("");
+  state.selectedServiceItems = [...new Set(selectedItems.filter(Boolean))];
+  DOM.serviceSelectInput.innerHTML = `
+    <option value="">Selecione um serviço</option>
+    ${SERVICE_OPTIONS.map((service) => `<option value="${escapeHtml(service)}">${escapeHtml(service)}</option>`).join("")}
+  `;
+  DOM.selectedServices.innerHTML = state.selectedServiceItems.length
+    ? state.selectedServiceItems
+        .map((service) => `
+          <button class="tag selected-service-tag" data-remove-service="${escapeHtml(service)}" type="button">
+            <span>${escapeHtml(service)}</span>
+            <span aria-hidden="true">×</span>
+          </button>
+        `)
+        .join("")
+    : `<span class="field-hint">Nenhum serviço adicionado ainda.</span>`;
+  DOM.serviceSelectInput.value = "";
 }
 
 function selectedServiceItems() {
-  return [...DOM.servicePicker.querySelectorAll('input[name="service_items"]:checked')].map((input) => input.value);
+  return [...state.selectedServiceItems];
+}
+
+function addServiceItem(service) {
+  if (!service || state.selectedServiceItems.includes(service)) return;
+  renderServicePicker([...state.selectedServiceItems, service]);
+}
+
+function removeServiceItem(service) {
+  renderServicePicker(state.selectedServiceItems.filter((item) => item !== service));
+}
+
+function renderAppointmentPetPreview() {
+  const pet = getPet(DOM.appointmentPetId.value);
+  DOM.appointmentPetPreview.innerHTML = pet
+    ? `<strong>${escapeHtml(pet.name)}</strong><span>${escapeHtml(pet.tutor_name || "Tutor não informado")}</span>`
+    : "Selecione um pet para ver o tutor.";
+}
+
+function populateClubinhoSlotOptions(pet) {
+  const plan = clubinhoPlanConfig(pet?.clubinho_plan);
+  DOM.appointmentClubinhoSlot.innerHTML = Array.from({ length: plan.bathSlots }, (_item, index) => {
+    const order = index + 1;
+    return `<option value="${order}º banho do ciclo">${order}º banho do ciclo</option>`;
+  }).join("");
+  const summary = clubinhoProgress(pet);
+  const suggestedSlot = Math.min(summary.bathDone + 1, plan.bathSlots);
+  DOM.appointmentClubinhoSlot.value = `${suggestedSlot}º banho do ciclo`;
+}
+
+function syncPetClubinhoFields() {
+  const enabled = DOM.petClubinhoInput.checked;
+  DOM.petClubinhoFields.hidden = !enabled;
+  if (!enabled) {
+    DOM.petClubinhoPlan.value = "mensal";
+    DOM.petClubinhoPrice.value = "";
+    DOM.petClubinhoAdhesionDate.value = "";
+    return;
+  }
+
+  if (!DOM.petClubinhoPlan.value) {
+    DOM.petClubinhoPlan.value = "mensal";
+  }
+  if (!DOM.petClubinhoAdhesionDate.value) {
+    DOM.petClubinhoAdhesionDate.value = DOM.petRegistrationDate.value || todayKey();
+  }
+}
+
+function syncAppointmentClubinhoUI() {
+  const pet = getPet(DOM.appointmentPetId.value);
+  renderAppointmentPetPreview();
+
+  const supportsClubinho = Boolean(pet?.clubinho_enabled);
+  DOM.appointmentClubinhoToggleWrap.hidden = !supportsClubinho;
+
+  if (!supportsClubinho) {
+    DOM.appointmentClubinhoInput.checked = false;
+    DOM.appointmentClubinhoFields.hidden = true;
+    DOM.appointmentAmountField.hidden = false;
+    DOM.appointmentClubinhoSlot.innerHTML = "";
+    return;
+  }
+
+  const plan = clubinhoPlanConfig(pet.clubinho_plan);
+  DOM.appointmentClubinhoInput.checked = true;
+  DOM.appointmentClubinhoFields.hidden = false;
+  DOM.appointmentAmountField.hidden = true;
+  DOM.appointmentClubinhoAmountHint.textContent = pet.clubinho_price !== null && pet.clubinho_price !== undefined
+    ? `${plan.label}: ${formatMoney(pet.clubinho_price)} cobrado automaticamente.`
+    : `${plan.label}: sem valor cadastrado no pacote.`;
+  populateClubinhoSlotOptions(pet);
 }
 
 function refreshPetSelect() {
   const preferredId = DOM.appointmentPetId.value || state.selectedPetId || state.data.pets[0]?.id || "";
-  const options = state.data.pets.map(
-    (pet) => `<option value="${escapeHtml(pet.id)}">${escapeHtml(pet.name)}</option>`,
-  );
+  const options = state.data.pets.map((pet) => {
+    const tutor = pet.tutor_name ? ` • ${pet.tutor_name}` : "";
+    return `<option value="${escapeHtml(pet.id)}">${escapeHtml(pet.name)}${escapeHtml(tutor)}</option>`;
+  });
   DOM.appointmentPetId.innerHTML = options.length ? options.join("") : `<option value="">Cadastre um pet primeiro</option>`;
   DOM.appointmentPetId.disabled = !options.length;
   if (options.length) {
@@ -742,6 +932,7 @@ function refreshPetSelect() {
       ? preferredId
       : state.data.pets[0].id;
   }
+  syncAppointmentClubinhoUI();
 }
 
 function filteredPets() {
@@ -765,9 +956,12 @@ function resetPetForm() {
   state.editingPetId = null;
   DOM.petForm.reset();
   DOM.petRegistrationDate.value = todayKey();
+  DOM.petClubinhoPlan.value = "mensal";
+  DOM.petClubinhoAdhesionDate.value = todayKey();
   DOM.petFormTitle.textContent = "Novo pet";
   DOM.petFormSubmitButton.textContent = "Salvar pet";
   DOM.petFormCancelButton.hidden = true;
+  syncPetClubinhoFields();
 }
 
 function startPetEdit(petId) {
@@ -780,10 +974,14 @@ function startPetEdit(petId) {
   DOM.petForm.elements.tutor_contact.value = pet.tutor_contact || "";
   DOM.petForm.elements.registration_date.value = pet.registration_date || todayKey();
   DOM.petForm.elements.clubinho_enabled.checked = Boolean(pet.clubinho_enabled);
+  DOM.petForm.elements.clubinho_plan.value = pet.clubinho_plan || "mensal";
+  DOM.petForm.elements.clubinho_price.value = pet.clubinho_price ?? "";
+  DOM.petForm.elements.clubinho_adhesion_date.value = pet.clubinho_adhesion_date || pet.registration_date || todayKey();
   DOM.petForm.elements.notes.value = pet.notes || "";
   DOM.petFormTitle.textContent = `Editando ${pet.name}`;
   DOM.petFormSubmitButton.textContent = "Salvar alterações";
   DOM.petFormCancelButton.hidden = false;
+  syncPetClubinhoFields();
   openSection("pets");
   DOM.petForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -818,6 +1016,7 @@ function renderDashboard() {
           return `
             <article class="stack-item">
               <strong>${escapeHtml(pet?.name || "Pet removido")}</strong>
+              <span class="muted">${escapeHtml(pet?.tutor_name || "Tutor não informado")}</span>
               <span class="muted">${escapeHtml(formatDate(item.appointment_at))} • ${escapeHtml(weekdayLabel(item.appointment_at))}</span>
               <span>${escapeHtml(formatTime(item.appointment_at))}</span>
             </article>
@@ -833,6 +1032,7 @@ function renderDashboard() {
           return `
             <article class="stack-item">
               <strong>${escapeHtml(pet?.name || "Pet removido")}</strong>
+              <span class="muted">${escapeHtml(pet?.tutor_name || "Tutor não informado")}</span>
               <span class="muted">${escapeHtml(formatDate(item.appointment_at))} • ${escapeHtml(weekdayLabel(item.appointment_at))}</span>
               <span>${escapeHtml(formatTime(item.appointment_at))}</span>
             </article>
@@ -847,7 +1047,7 @@ function renderAppointmentsTable() {
   const range = agendaRange();
   const confirmed = rows.filter((item) => item.status === "confirmado").length;
   const done = rows.filter((item) => item.status === "realizado").length;
-  const clubinhoCount = rows.filter((item) => getPet(item.pet_id)?.clubinho_enabled).length;
+  const clubinhoCount = rows.filter((item) => item.is_clubinho).length;
 
   DOM.agendaRangeLabel.textContent = range.label;
   DOM.agendaSummaryGrid.innerHTML = `
@@ -887,7 +1087,13 @@ function renderAppointmentsTable() {
               <td data-label="Data">${escapeHtml(formatDate(item.appointment_at))}</td>
               <td data-label="Dia">${escapeHtml(weekdayLabel(item.appointment_at))}</td>
               <td data-label="Horário">${escapeHtml(formatTime(item.appointment_at))}</td>
-              <td data-label="Pet">${escapeHtml(pet?.name || "Pet removido")}</td>
+              <td data-label="Pet">
+                <div class="table-pet">
+                  <strong>${escapeHtml(pet?.name || "Pet removido")}</strong>
+                  <span class="muted">${escapeHtml(pet?.tutor_name || "Tutor não informado")}</span>
+                  ${item.is_clubinho ? `<span class="tag success">${escapeHtml(item.clubinho_slot || "Clubinho MIYO")}</span>` : ""}
+                </div>
+              </td>
               <td data-label="Status"><span class="tag ${statusTone(item.status)}">${escapeHtml(STATUS_LABELS[item.status] || item.status)}</span></td>
               <td data-label="Ações"><div class="action-row">${actions.join("")}</div></td>
             </tr>
@@ -902,11 +1108,12 @@ function renderPetsTable() {
   DOM.petsTableBody.innerHTML = rows.length
     ? rows
         .map((item) => {
+          const plan = clubinhoPlanConfig(item.clubinho_plan);
           return `
             <tr>
               <td data-label="Pet"><div class="pet-identity">${petAvatarMarkup(item)}<span>${escapeHtml(item.name)}</span></div></td>
               <td data-label="Tutor">${escapeHtml(item.tutor_name || "—")}</td>
-              <td data-label="Clubinho">${item.clubinho_enabled ? '<span class="tag success">&#9733; Clubinho MIYO</span>' : '<span class="muted">Não</span>'}</td>
+              <td data-label="Clubinho">${item.clubinho_enabled ? `<span class="tag success">&#9733; ${escapeHtml(plan.label)}</span>` : '<span class="muted">Não</span>'}</td>
               <td data-label="Cadastro">${escapeHtml(formatDate(item.registration_date))}</td>
               <td data-label="Ações">
                 <div class="action-row">
@@ -931,6 +1138,7 @@ function renderPetDetails() {
 
   const history = appointmentsForPet(pet.id);
   const clubinhoText = pet.clubinho_enabled ? clubinhoHeadline(pet.id) : "Não participa do clubinho";
+  const plan = clubinhoPlanConfig(pet.clubinho_plan);
 
   DOM.petDetailsPanel.innerHTML = `
     <div class="pet-profile-card">
@@ -944,6 +1152,7 @@ function renderPetDetails() {
       </div>
       <div class="action-row">
         <button class="action-chip" data-edit-pet="${pet.id}">Editar ficha</button>
+        ${pet.clubinho_enabled ? `<button class="action-chip" data-renew-clubinho="${pet.id}">Renovar clubinho</button>` : ""}
       </div>
       <div class="pet-profile-grid">
         <div>
@@ -957,6 +1166,18 @@ function renderPetDetails() {
         <div>
           <span class="mini-label">Cadastro</span>
           <strong>${escapeHtml(formatDate(pet.registration_date))}</strong>
+        </div>
+        <div>
+          <span class="mini-label">Plano</span>
+          <strong>${escapeHtml(pet.clubinho_enabled ? plan.label : "Avulso")}</strong>
+        </div>
+        <div>
+          <span class="mini-label">Pacote</span>
+          <strong>${escapeHtml(pet.clubinho_enabled ? formatMoney(pet.clubinho_price) : "—")}</strong>
+        </div>
+        <div>
+          <span class="mini-label">Adesão</span>
+          <strong>${escapeHtml(pet.clubinho_enabled ? formatDate(pet.clubinho_adhesion_date) : "—")}</strong>
         </div>
         <div>
           <span class="mini-label">Situação do Clubinho</span>
@@ -983,7 +1204,7 @@ function renderPetDetails() {
                 </div>
                 <div class="history-side">
                   <span>${escapeHtml(formatMoney(item.amount))}</span>
-                  ${pet.clubinho_enabled ? '<span class="tag success">Clubinho MIYO</span>' : ""}
+                  ${item.is_clubinho ? `<span class="tag success">${escapeHtml(item.clubinho_slot || "Clubinho MIYO")}</span>` : ""}
                 </div>
                 ${item.notes ? `<p class="muted">${escapeHtml(item.notes)}</p>` : ""}
               </article>
@@ -1001,6 +1222,7 @@ function renderClubinhoBoard() {
     ? pets
         .map((pet) => {
           const summary = clubinhoProgress(pet.id);
+          const plan = clubinhoPlanConfig(pet.clubinho_plan);
           return `
             <article class="clubinho-card">
               <div class="clubinho-card-head">
@@ -1011,16 +1233,27 @@ function renderClubinhoBoard() {
                     <p>${escapeHtml(pet.tutor_name || "Tutor não informado")}</p>
                   </div>
                 </div>
-                <button class="action-chip" data-open-pet="${pet.id}">Abrir ficha</button>
+                <div class="action-row">
+                  <button class="action-chip" data-open-pet="${pet.id}">Abrir ficha</button>
+                  <button class="action-chip" data-renew-clubinho="${pet.id}">Renovar</button>
+                </div>
               </div>
               <div class="clubinho-mini-grid">
                 <div class="clubinho-mini-stat">
                   <span class="mini-label">Banhos</span>
-                  <strong>${summary.bathDone}/4</strong>
+                  <strong>${summary.bathDone}/${plan.bathSlots}</strong>
                 </div>
                 <div class="clubinho-mini-stat">
-                  <span class="mini-label">Cadastro</span>
-                  <strong>${escapeHtml(formatDate(pet.registration_date))}</strong>
+                  <span class="mini-label">Plano</span>
+                  <strong>${escapeHtml(plan.label)}</strong>
+                </div>
+                <div class="clubinho-mini-stat">
+                  <span class="mini-label">Pacote</span>
+                  <strong>${escapeHtml(formatMoney(pet.clubinho_price))}</strong>
+                </div>
+                <div class="clubinho-mini-stat">
+                  <span class="mini-label">Adesão</span>
+                  <strong>${escapeHtml(formatDate(pet.clubinho_adhesion_date))}</strong>
                 </div>
               </div>
               ${renderClubinhoProgress(pet.id)}
@@ -1074,6 +1307,14 @@ function openSection(section) {
   DOM.panels.forEach((panel) => panel.classList.toggle("is-active", panel.dataset.panel === section));
 }
 
+function resetAppointmentForm() {
+  DOM.appointmentForm.reset();
+  DOM.appointmentDate.value = todayKey();
+  DOM.appointmentTime.value = "09:00";
+  renderServicePicker();
+  syncAppointmentClubinhoUI();
+}
+
 async function handlePetSubmit(event) {
   event.preventDefault();
   const formData = new FormData(event.currentTarget);
@@ -1084,8 +1325,20 @@ async function handlePetSubmit(event) {
     breed: blankToNull(formData.get("breed")),
     registration_date: formData.get("registration_date").toString(),
     clubinho_enabled: formData.get("clubinho_enabled") === "on",
+    clubinho_plan: formData.get("clubinho_enabled") === "on" ? formData.get("clubinho_plan").toString() : null,
+    clubinho_price: formData.get("clubinho_enabled") === "on" ? blankToNull(formData.get("clubinho_price")) : null,
+    clubinho_adhesion_date:
+      formData.get("clubinho_enabled") === "on" ? formData.get("clubinho_adhesion_date").toString() : null,
     notes: blankToNull(formData.get("notes")),
   };
+
+  if (payload.clubinho_enabled && !payload.clubinho_price) {
+    notify("Preencha o valor do pacote para o pet do Clubinho MIYO.", "warning");
+    return;
+  }
+  if (payload.clubinho_enabled && !payload.clubinho_adhesion_date) {
+    payload.clubinho_adhesion_date = payload.registration_date || todayKey();
+  }
 
   if (state.editingPetId) {
     const updated = await updateEntity("pets", state.editingPetId, payload);
@@ -1110,6 +1363,7 @@ async function handleAppointmentSubmit(event) {
   const formData = new FormData(event.currentTarget);
   const pet = getPet(formData.get("pet_id").toString());
   const services = selectedServiceItems();
+  const isClubinho = Boolean(pet?.clubinho_enabled && formData.get("is_clubinho") === "on");
 
   if (!pet) {
     notify("Selecione um pet válido.", "warning");
@@ -1117,6 +1371,10 @@ async function handleAppointmentSubmit(event) {
   }
   if (!services.length) {
     notify("Selecione pelo menos um serviço realizado.", "warning");
+    return;
+  }
+  if (isClubinho && !pet.clubinho_price) {
+    notify("Esse pet do clubinho ainda não tem valor de pacote cadastrado.", "warning");
     return;
   }
 
@@ -1128,15 +1386,13 @@ async function handleAppointmentSubmit(event) {
     ),
     status: "agendado",
     service_items: services,
-    amount: blankToNull(formData.get("amount")),
-    clubinho_slot: null,
+    amount: isClubinho ? pet.clubinho_price : blankToNull(formData.get("amount")),
+    is_clubinho: isClubinho,
+    clubinho_slot: isClubinho ? formData.get("clubinho_slot").toString() : null,
     notes: blankToNull(formData.get("notes")),
   });
   if (!saved) return;
-  event.currentTarget.reset();
-  DOM.appointmentDate.value = todayKey();
-  DOM.appointmentTime.value = "09:00";
-  renderServicePicker();
+  resetAppointmentForm();
   state.selectedPetId = pet.id;
   renderAll();
   notify("Agendamento salvo com sucesso.", "success");
@@ -1285,6 +1541,24 @@ function bindEvents() {
   DOM.signOutButton.addEventListener("click", handleSignOut);
   DOM.cloudLaunchButton.addEventListener("click", () => openSection("cloud"));
   DOM.petFormCancelButton.addEventListener("click", resetPetForm);
+  DOM.petClubinhoInput.addEventListener("change", syncPetClubinhoFields);
+  DOM.petRegistrationDate.addEventListener("change", () => {
+    if (!DOM.petClubinhoAdhesionDate.value || DOM.petClubinhoAdhesionDate.value === todayKey()) {
+      DOM.petClubinhoAdhesionDate.value = DOM.petRegistrationDate.value || todayKey();
+    }
+  });
+  DOM.appointmentPetId.addEventListener("change", syncAppointmentClubinhoUI);
+  DOM.appointmentClubinhoInput.addEventListener("change", () => {
+    const pet = getPet(DOM.appointmentPetId.value);
+    const enabled = Boolean(pet?.clubinho_enabled && DOM.appointmentClubinhoInput.checked);
+    DOM.appointmentClubinhoFields.hidden = !enabled;
+    DOM.appointmentAmountField.hidden = enabled;
+    if (enabled && pet) {
+      populateClubinhoSlotOptions(pet);
+    }
+  });
+  DOM.serviceSelectInput.addEventListener("change", () => addServiceItem(DOM.serviceSelectInput.value));
+  DOM.serviceAddButton.addEventListener("click", () => addServiceItem(DOM.serviceSelectInput.value));
   DOM.syncButton.addEventListener("click", () => refreshData());
   DOM.exportDataButton.addEventListener("click", exportCurrentData);
   DOM.importDataButton.addEventListener("click", () => DOM.importFileInput.click());
@@ -1318,11 +1592,31 @@ function bindEvents() {
       return;
     }
 
+    const removeServiceButton = event.target.closest("[data-remove-service]");
+    if (removeServiceButton) {
+      removeServiceItem(removeServiceButton.dataset.removeService);
+      return;
+    }
+
     const openPetButton = event.target.closest("[data-open-pet]");
     if (openPetButton) {
       state.selectedPetId = openPetButton.dataset.openPet;
       openSection("pets");
       renderPetDetails();
+      return;
+    }
+
+    const renewClubinhoButton = event.target.closest("[data-renew-clubinho]");
+    if (renewClubinhoButton) {
+      const pet = getPet(renewClubinhoButton.dataset.renewClubinho);
+      if (!pet) return;
+      const renewed = await updateEntity("pets", pet.id, {
+        clubinho_enabled: true,
+        clubinho_adhesion_date: todayKey(),
+      });
+      if (!renewed) return;
+      renderAll();
+      notify(`Clubinho de ${pet.name} renovado a partir de hoje.`, "success");
       return;
     }
 
@@ -1368,7 +1662,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260402-7", {
+    const registration = await navigator.serviceWorker.register("./sw.js?v=20260402-8", {
       updateViaCache: "none",
     });
     await registration.update();
@@ -1380,8 +1674,7 @@ async function registerServiceWorker() {
 async function initialize() {
   bindEvents();
   renderServicePicker();
-  DOM.appointmentDate.value = todayKey();
-  DOM.appointmentTime.value = "09:00";
+  resetAppointmentForm();
   DOM.agendaDateFilter.value = todayKey();
   resetPetForm();
 

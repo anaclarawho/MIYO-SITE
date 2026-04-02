@@ -31,6 +31,9 @@ create table if not exists public.pets (
   tutor_contact text,
   registration_date date default current_date,
   clubinho_enabled boolean not null default false,
+  clubinho_plan text check (clubinho_plan in ('mensal', 'quinzenal')),
+  clubinho_price numeric(10, 2),
+  clubinho_adhesion_date date,
   notes text,
   created_at timestamptz not null default timezone('utc', now())
 );
@@ -68,6 +71,7 @@ create table if not exists public.appointments (
   status text not null default 'agendado' check (status in ('agendado', 'confirmado', 'realizado', 'cancelado')),
   service_items jsonb not null default '[]'::jsonb,
   amount numeric(10, 2),
+  is_clubinho boolean not null default false,
   clubinho_slot text,
   notes text,
   created_at timestamptz not null default timezone('utc', now())
@@ -79,9 +83,15 @@ alter table public.pets add column if not exists tutor_name text;
 alter table public.pets add column if not exists tutor_contact text;
 alter table public.pets add column if not exists registration_date date default current_date;
 alter table public.pets add column if not exists clubinho_enabled boolean not null default false;
+alter table public.pets add column if not exists clubinho_plan text;
+alter table public.pets add column if not exists clubinho_price numeric(10, 2);
+alter table public.pets add column if not exists clubinho_adhesion_date date;
 alter table public.appointments add column if not exists service_items jsonb not null default '[]'::jsonb;
 alter table public.appointments add column if not exists amount numeric(10, 2);
+alter table public.appointments add column if not exists is_clubinho boolean not null default false;
 alter table public.appointments add column if not exists clubinho_slot text;
+alter table public.pets drop constraint if exists pets_clubinho_plan_check;
+alter table public.pets add constraint pets_clubinho_plan_check check (clubinho_plan in ('mensal', 'quinzenal'));
 create index if not exists pets_user_idx on public.pets(user_id);
 create index if not exists pets_tutor_idx on public.pets(tutor_id);
 create index if not exists packages_user_idx on public.packages(user_id);

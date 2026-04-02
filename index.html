@@ -9,17 +9,17 @@
     >
     <meta name="theme-color" content="#1f5a52">
     <title>MIYO</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260402-7">
-    <link rel="icon" href="./assets/brand/logo-secundaria-turquesa.png?v=20260402-7" type="image/png">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260402-8">
+    <link rel="icon" href="./assets/brand/logo-secundaria-turquesa.png?v=20260402-8" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     >
-    <link rel="stylesheet" href="./styles.css?v=20260402-7">
-    <script defer src="./config.js?v=20260402-7"></script>
-    <script type="module" defer src="./app.mjs?v=20260402-7"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260402-8">
+    <script defer src="./config.js?v=20260402-8"></script>
+    <script type="module" defer src="./app.mjs?v=20260402-8"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -126,6 +126,7 @@
                   <label>
                     Pet
                     <select name="pet_id" id="appointmentPetId" required></select>
+                    <span class="field-hint" id="appointmentPetPreview">Selecione um pet para ver o tutor.</span>
                   </label>
                   <label>
                     Data
@@ -135,13 +136,39 @@
                     Hora
                     <input type="time" name="appointment_time" id="appointmentTime" required>
                   </label>
-                  <label>
-                    Valor cobrado
+                  <label id="appointmentAmountField">
+                    Valor manual
                     <input type="number" name="amount" min="0" step="0.01" placeholder="0.00">
                   </label>
+                  <label class="clubinho-toggle full-width" id="appointmentClubinhoToggleWrap" hidden>
+                    Clubinho MIYO
+                    <span class="clubinho-inline">
+                      <input type="checkbox" name="is_clubinho" id="appointmentClubinhoInput">
+                      <span class="clubinho-star" aria-hidden="true">&#9733;</span>
+                      <span>Lançar este atendimento como clubinho</span>
+                    </span>
+                  </label>
+                  <div class="clubinho-config full-width" id="appointmentClubinhoFields" hidden>
+                    <label>
+                      Banho do ciclo
+                      <select name="clubinho_slot" id="appointmentClubinhoSlot"></select>
+                    </label>
+                    <div class="helper-block clubinho-amount-card">
+                      <span class="mini-label">Cobrança automática</span>
+                      <span class="muted" id="appointmentClubinhoAmountHint">O valor do pacote será usado.</span>
+                    </div>
+                  </div>
                   <label class="full-width">
-                    Serviços realizados
-                    <div class="service-picker" id="servicePicker"></div>
+                    Serviços
+                    <div class="service-picker compact-picker" id="servicePicker">
+                      <div class="service-inline-bar">
+                        <select id="serviceSelectInput">
+                          <option value="">Selecione um serviço</option>
+                        </select>
+                        <button class="secondary-button" id="serviceAddButton" type="button">Adicionar</button>
+                      </div>
+                      <div class="selected-services" id="selectedServices"></div>
+                    </div>
                   </label>
                   <label class="full-width">
                     Observações
@@ -233,6 +260,23 @@
                       <span>Sinalizar como Clubinho</span>
                     </span>
                   </label>
+                  <div class="clubinho-config full-width" id="petClubinhoFields" hidden>
+                    <label>
+                      Tipo do clubinho
+                      <select name="clubinho_plan" id="petClubinhoPlan">
+                        <option value="mensal">Mensal • 4 banhos</option>
+                        <option value="quinzenal">Quinzenal • 2 banhos</option>
+                      </select>
+                    </label>
+                    <label>
+                      Valor do pacote
+                      <input type="number" name="clubinho_price" id="petClubinhoPrice" min="0" step="0.01" placeholder="0.00">
+                    </label>
+                    <label>
+                      Adesão do clubinho
+                      <input type="date" name="clubinho_adhesion_date" id="petClubinhoAdhesionDate">
+                    </label>
+                  </div>
                   <label class="full-width">
                     Observações
                     <textarea name="notes" rows="3" placeholder="Ex.: pele sensível, não secar muito perto do rosto."></textarea>
@@ -281,7 +325,7 @@
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Clubinho MIYO</p>
-                <h2>Acompanhe os pets do clubinho e o andamento do mês</h2>
+                <h2>Acompanhe os pets do clubinho e o andamento do ciclo</h2>
               </div>
             </div>
 
@@ -292,8 +336,8 @@
                   <input type="search" id="clubinhoSearchInput" placeholder="Buscar por pet, tutor ou raça">
                 </label>
                 <div class="helper-block">
-                  <span class="mini-label">Fechamento mensal</span>
-                  <span class="muted">4 banhos mensais, 1 hidratação, 1 escovação dental e 1 tosa higiênica.</span>
+                  <span class="mini-label">Planos</span>
+                  <span class="muted">Mensal: 4 banhos + extras. Quinzenal: 2 banhos por ciclo.</span>
                 </div>
               </div>
               <div class="clubinho-grid" id="clubinhoGrid"></div>
