@@ -1,6 +1,6 @@
 window.MIYO_CONFIG = window.MIYO_CONFIG || {
   APP_NAME: "MIYO",
   DEFAULT_CURRENCY: "BRL",
-  SUPABASE_URL: "",
-  SUPABASE_ANON_KEY: "",
+  SUPABASE_URL: "https://dxkfwhlmfhxlbapfuycl.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR4a2Z3aGxtZmh4bGJhcGZ1eWNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDczNzAsImV4cCI6MjA5MDcyMzM3MH0.UU6A1gRZMvzHClK57wWjVdPSqPNiSwq-cHnrO42oZxM",
 };
