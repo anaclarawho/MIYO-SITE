@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MIYO Pet Care">
+  <defs>
+    <linearGradient id="bg-mask" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#193f39" />
+      <stop offset="100%" stop-color="#2d756a" />
+    </linearGradient>
+    <linearGradient id="paw-mask" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe8de" />
+      <stop offset="100%" stop-color="#dd8a62" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="160" fill="url(#bg-mask)" />
+  <g transform="translate(0 10)">
+    <circle cx="182" cy="166" r="38" fill="url(#paw-mask)" />
+    <circle cx="256" cy="132" r="38" fill="url(#paw-mask)" />
+    <circle cx="330" cy="166" r="38" fill="url(#paw-mask)" />
+    <ellipse cx="256" cy="286" rx="108" ry="94" fill="url(#paw-mask)" />
+    <path
+      d="M188 294c18 17 40 27 68 27 30 0 53-10 69-27"
+      fill="none"
+      stroke="#1f5a52"
+      stroke-linecap="round"
+      stroke-width="18"
+    />
+  </g>
+</svg>

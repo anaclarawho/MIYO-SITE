@@ -1,0 +1,6 @@
+window.MIYO_CONFIG = window.MIYO_CONFIG || {
+  APP_NAME: "MIYO",
+  DEFAULT_CURRENCY: "BRL",
+  SUPABASE_URL: "",
+  SUPABASE_ANON_KEY: "",
+};

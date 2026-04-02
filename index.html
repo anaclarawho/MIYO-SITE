@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Sistema de gestão para banho e tosa com agenda, cadastro de pets e histórico de atendimentos."
+    >
+    <meta name="theme-color" content="#1f5a52">
+    <title>MIYO</title>
+    <link rel="manifest" href="./manifest.webmanifest?v=20260402-5">
+    <link rel="icon" href="./assets/brand/logo-secundaria-turquesa.png?v=20260402-5" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="./styles.css?v=20260402-5">
+    <script defer src="./config.js?v=20260402-5"></script>
+    <script type="module" defer src="./app.mjs?v=20260402-5"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <div class="brand-lockup">
+            <img class="brand-logo" src="./assets/brand/logo-secundaria-turquesa.png" alt="Logo MIYO">
+            <div>
+              <p class="eyebrow">MIYO</p>
+              <h1>MIYO</h1>
+              <p class="lede">
+                Banho, tosa e bem-estar animal com agenda, histórico
+                para cada pet.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="cloud-launch" id="cloudLaunchButton" type="button" title="Abrir nuvem" aria-label="Abrir nuvem">
+            <span aria-hidden="true">☁</span>
+          </button>
+          <div class="status-cluster">
+            <span class="status-pill" id="storageModeBadge">Modo local</span>
+            <span class="status-pill soft" id="authModeBadge">Sem login</span>
+          </div>
+          <button class="ghost-button" id="syncButton" type="button">Atualizar dados</button>
+          <button class="primary-button" id="installButton" type="button" hidden>Instalar app</button>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside class="sidebar">
+          <div class="sidebar-card">
+            <p class="sidebar-title">Menu</p>
+            <nav class="sidebar-nav">
+              <button class="nav-item is-active" data-section="dashboard" type="button">INÍCIO</button>
+              <button class="nav-item" data-section="agenda" type="button">AGENDA</button>
+              <button class="nav-item" data-section="pets" type="button">PETS</button>
+              <button class="nav-item" data-section="clubinho" type="button">CLUBINHO MIYO</button>
+            </nav>
+          </div>
+
+          <div class="sidebar-card subtle">
+            <p class="sidebar-title">Operação do dia</p>
+            <p class="sidebar-note" id="sidebarSummary">O app está pronto para funcionar em modo local agora mesmo.</p>
+          </div>
+        </aside>
+
+        <main class="content">
+          <section class="panel is-active" data-panel="dashboard">
+            <article class="hero-card">
+              <div class="hero-brand">
+                <img class="hero-logo" src="./assets/brand/logo-secundaria-turquesa.png" alt="Logo MIYO">
+                <div>
+                  <p class="eyebrow">INÍCIO</p>
+                  <h2>MIYO</h2>
+                  <p class="hero-copy">Banho, tosa e bem-estar animal com uma agenda limpa e fichas completas para cada pet.</p>
+                </div>
+              </div>
+              <div class="hero-meta">
+                <span class="metric-pill" id="todayLabel">Hoje</span>
+                <span class="metric-pill soft" id="cloudStateLabel">Sem sincronização</span>
+              </div>
+            </article>
+
+            <div class="stats-grid" id="statsGrid"></div>
+
+            <div class="two-column-grid">
+              <article class="card">
+                <div class="section-heading">
+                  <div>
+                    <p class="eyebrow">Atendimentos hoje</p>
+                    <h3>Quem chega hoje</h3>
+                  </div>
+                </div>
+                <div class="stack-list" id="upcomingAppointments"></div>
+              </article>
+
+              <article class="card">
+                <div class="section-heading">
+                  <div>
+                    <p class="eyebrow">Agenda</p>
+                    <h3>Próximos horários</h3>
+                  </div>
+                </div>
+                <div class="stack-list" id="packageAlerts"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel" data-panel="agenda">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Agenda</p>
+                <h2>Agende por pet e marque exatamente o que foi feito</h2>
+              </div>
+            </div>
+
+            <div class="two-column-grid align-start">
+              <article class="card">
+                <h3>Novo agendamento</h3>
+                <form class="grid-form" id="appointmentForm">
+                  <label>
+                    Pet
+                    <select name="pet_id" id="appointmentPetId" required></select>
+                  </label>
+                  <label>
+                    Data
+                    <input type="date" name="appointment_date" id="appointmentDate" required>
+                  </label>
+                  <label>
+                    Hora
+                    <input type="time" name="appointment_time" id="appointmentTime" required>
+                  </label>
+                  <label>
+                    Valor cobrado
+                    <input type="number" name="amount" min="0" step="0.01" placeholder="0.00">
+                  </label>
+                  <label class="full-width">
+                    Serviços realizados
+                    <div class="service-picker" id="servicePicker"></div>
+                  </label>
+                  <label class="full-width">
+                    Observações
+                    <textarea name="notes" rows="3" placeholder="Ex.: comportamento, recados do tutor ou detalhes do atendimento."></textarea>
+                  </label>
+
+                  <button class="primary-button full-width" type="submit">Salvar agendamento</button>
+                </form>
+              </article>
+
+              <article class="card">
+                <div class="toolbar toolbar-agenda">
+                  <label class="full-width">
+                    Pesquisar na agenda
+                    <input type="search" id="agendaSearchInput" placeholder="Buscar por pet, tutor, serviço ou observação">
+                  </label>
+                  <label>
+                    Data de referência
+                    <input type="date" id="agendaDateFilter">
+                  </label>
+                  <div class="helper-block">
+                    <span class="mini-label">Visualização</span>
+                    <span class="muted" id="agendaRangeLabel">Agenda do dia.</span>
+                  </div>
+                </div>
+                <div class="scope-switch" aria-label="Período da agenda">
+                  <button class="scope-chip is-active" data-agenda-scope="day" type="button">Dia</button>
+                  <button class="scope-chip" data-agenda-scope="week" type="button">Semana</button>
+                  <button class="scope-chip" data-agenda-scope="month" type="button">Mês</button>
+                  <button class="scope-chip" data-agenda-scope="year" type="button">Ano</button>
+                </div>
+                <div class="stats-grid compact" id="agendaSummaryGrid"></div>
+                <div class="table-shell">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Dia</th>
+                        <th>Horário</th>
+                        <th>Pet</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody id="appointmentsTableBody"></tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel" data-panel="pets">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Pets</p>
+                <h2>Cadastre o pet e concentre toda a ficha dele em um só lugar</h2>
+              </div>
+            </div>
+
+            <div class="two-column-grid align-start">
+              <article class="card">
+                <h3 id="petFormTitle">Novo pet</h3>
+                <form class="grid-form" id="petForm">
+                  <label>
+                    Nome do pet
+                    <input type="text" name="name" placeholder="Ex.: Mel" required>
+                  </label>
+                  <label>
+                    Nome do tutor
+                    <input type="text" name="tutor_name" placeholder="Ex.: Fernanda Souza" required>
+                  </label>
+                  <label>
+                    Raça
+                    <input type="text" name="breed" placeholder="Ex.: Shih-tzu">
+                  </label>
+                  <label>
+                    Contato do tutor
+                    <input type="text" name="tutor_contact" placeholder="WhatsApp ou telefone">
+                  </label>
+                  <label>
+                    Data de cadastro
+                    <input type="date" name="registration_date" id="petRegistrationDate" required>
+                  </label>
+                  <label class="clubinho-toggle">
+                    Clubinho MIYO
+                    <span class="clubinho-inline">
+                      <input type="checkbox" name="clubinho_enabled" id="petClubinhoInput">
+                      <span class="clubinho-star" aria-hidden="true">&#9733;</span>
+                      <span>Sinalizar como Clubinho</span>
+                    </span>
+                  </label>
+                  <label class="full-width">
+                    Observações
+                    <textarea name="notes" rows="3" placeholder="Ex.: pele sensível, não secar muito perto do rosto."></textarea>
+                  </label>
+                  <div class="button-row full-width">
+                    <button class="primary-button" id="petFormSubmitButton" type="submit">Salvar pet</button>
+                    <button class="secondary-button" id="petFormCancelButton" type="button" hidden>Cancelar edição</button>
+                  </div>
+                </form>
+              </article>
+
+              <article class="card">
+                <h3>Ficha do pet</h3>
+                <div id="petDetailsPanel"></div>
+              </article>
+            </div>
+
+            <article class="card">
+              <div class="section-heading">
+                <div>
+                  <h3>Pets cadastrados</h3>
+                </div>
+                <label class="search-inline">
+                  Pesquisar
+                  <input type="search" id="petsSearchInput" placeholder="Buscar por pet, tutor, raça ou contato">
+                </label>
+              </div>
+              <div class="table-shell">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Pet</th>
+                      <th>Tutor</th>
+                      <th>Clubinho</th>
+                      <th>Cadastro</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="petsTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+
+          <section class="panel" data-panel="clubinho">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Clubinho MIYO</p>
+                <h2>Acompanhe os pets do clubinho e o andamento do mês</h2>
+              </div>
+            </div>
+
+            <article class="card">
+              <div class="toolbar toolbar-clubinho">
+                <label class="full-width">
+                  Pesquisar no Clubinho MIYO
+                  <input type="search" id="clubinhoSearchInput" placeholder="Buscar por pet, tutor ou raça">
+                </label>
+                <div class="helper-block">
+                  <span class="mini-label">Fechamento mensal</span>
+                  <span class="muted">4 banhos mensais, 1 hidratação, 1 escovação dental e 1 tosa higiênica.</span>
+                </div>
+              </div>
+              <div class="clubinho-grid" id="clubinhoGrid"></div>
+            </article>
+          </section>
+
+          <section class="panel" data-panel="cloud">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Nuvem e instalação</p>
+                <h2>Sincronize seus dados e use como app em qualquer dispositivo</h2>
+              </div>
+            </div>
+
+            <div class="two-column-grid align-start">
+              <article class="card">
+                <h3>Estado atual</h3>
+                <div class="status-board">
+                  <div>
+                    <span class="mini-label">Armazenamento</span>
+                    <strong id="cloudStorageState">Local no navegador</strong>
+                  </div>
+                  <div>
+                    <span class="mini-label">Conta</span>
+                    <strong id="cloudUserState">Sem login</strong>
+                  </div>
+                </div>
+                <p class="helper-text" id="cloudSummary">
+                  Você já pode testar tudo agora. Quando ativar o Supabase, os dados passam a
+                  sincronizar entre celular e Windows.
+                </p>
+              </article>
+
+              <article class="card">
+                <h3>Conectar com Supabase</h3>
+                <form class="grid-form" id="cloudConfigForm">
+                  <label class="full-width">
+                    Supabase URL
+                    <input type="url" name="supabase_url" id="supabaseUrlInput" placeholder="https://SEU-PROJETO.supabase.co">
+                  </label>
+                  <label class="full-width">
+                    Supabase anon key
+                    <textarea
+                      name="supabase_anon_key"
+                      id="supabaseAnonKeyInput"
+                      rows="4"
+                      placeholder="Cole aqui a anon public key do projeto"
+                    ></textarea>
+                  </label>
+                  <button class="primary-button full-width" type="submit">Salvar e conectar</button>
+                </form>
+              </article>
+            </div>
+
+            <div class="two-column-grid align-start">
+              <article class="card">
+                <h3>Acessar a conta</h3>
+                <form class="grid-form" id="authForm">
+                  <label>
+                    E-mail
+                    <input type="email" name="email" id="authEmailInput" placeholder="voce@seudominio.com" required>
+                  </label>
+                  <label>
+                    Senha
+                    <input type="password" name="password" id="authPasswordInput" placeholder="Sua senha" required>
+                  </label>
+                  <div class="button-row full-width">
+                    <button class="primary-button" id="signInButton" type="submit">Entrar</button>
+                    <button class="ghost-button" id="signUpButton" type="button">Criar conta</button>
+                  </div>
+                </form>
+                <button class="secondary-button" id="signOutButton" type="button" hidden>Sair da conta</button>
+              </article>
+
+              <article class="card">
+                <h3>Backup e instalação</h3>
+                <div class="button-column">
+                  <button class="ghost-button" id="exportDataButton" type="button">Exportar dados locais em JSON</button>
+                  <button class="ghost-button" id="importDataButton" type="button">Importar dados locais</button>
+                  <button class="secondary-button" id="resetDemoButton" type="button">Restaurar demo local</button>
+                </div>
+                <p class="helper-text">
+                  Para instalar no celular ou no Windows, abra este site no navegador e use
+                  “Instalar app” ou “Adicionar à tela inicial”.
+                </p>
+                <input id="importFileInput" type="file" accept="application/json" hidden>
+              </article>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>

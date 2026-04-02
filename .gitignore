@@ -1,0 +1,15 @@
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.env
+.env.*
+
+node_modules/
+dist/
+build/
+.vercel/
+.wrangler/
+
+meu_bot_agenda.py.txt
+requirements.txt.txt
