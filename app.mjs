@@ -373,6 +373,14 @@ function tutorContactsText(value) {
   return contacts.length ? contacts.join(" • ") : "—";
 }
 
+function sortedPetsByName(items) {
+  return [...items].sort((left, right) => {
+    const leftName = String(left?.name || "");
+    const rightName = String(right?.name || "");
+    return leftName.localeCompare(rightName, "pt-BR");
+  });
+}
+
 function parseMoneyInput(value) {
   const raw = String(value ?? "").replace(/[^\d,.-]/g, "").trim();
   if (!raw) return null;
@@ -863,6 +871,8 @@ async function fetchRemoteTable(table) {
   let query = state.supabase.from(table).select("*");
   if (table === "appointments") {
     query = query.order("appointment_at", { ascending: true });
+  } else if (table === "pets") {
+    query = query.order("name", { ascending: true });
   } else {
     query = query.order("created_at", { ascending: false });
   }
@@ -879,7 +889,7 @@ async function refreshData({ silent = false } = {}) {
       SYNC_TABLES.forEach((table, index) => {
         remote[table] = results[index];
       });
-      state.data = normalizeDb(remote);
+      state.data = sortDb(normalizeDb(remote));
     } else {
       state.data = readLocalDb();
     }
@@ -1233,24 +1243,25 @@ function syncAppointmentClubinhoUI() {
 }
 
 function refreshPetSelect() {
-  const preferredId = DOM.appointmentPetId.value || state.selectedPetId || state.data.pets[0]?.id || "";
-  const options = state.data.pets.map((pet) => {
+  const sortedPets = sortedPetsByName(state.data.pets);
+  const preferredId = DOM.appointmentPetId.value || state.selectedPetId || sortedPets[0]?.id || "";
+  const options = sortedPets.map((pet) => {
     const tutor = pet.tutor_name ? ` • ${pet.tutor_name}` : "";
     return `<option value="${escapeHtml(pet.id)}">${escapeHtml(pet.name)}${escapeHtml(tutor)}</option>`;
   });
   DOM.appointmentPetId.innerHTML = options.length ? options.join("") : `<option value="">Cadastre um pet primeiro</option>`;
   DOM.appointmentPetId.disabled = !options.length;
   if (options.length) {
-    DOM.appointmentPetId.value = state.data.pets.some((pet) => pet.id === preferredId)
+    DOM.appointmentPetId.value = sortedPets.some((pet) => pet.id === preferredId)
       ? preferredId
-      : state.data.pets[0].id;
+      : sortedPets[0].id;
   }
   syncAppointmentClubinhoUI();
 }
 
 function filteredPets() {
   const searchTerm = normalizeSearch(DOM.petsSearchInput?.value || "");
-  return state.data.pets.filter((pet) => {
+  return sortedPetsByName(state.data.pets).filter((pet) => {
     const terms = [pet.name, pet.tutor_name, pet.breed, pet.tutor_contact, pet.notes].join(" ");
     return includesSearch(terms, searchTerm);
   });
@@ -1258,7 +1269,7 @@ function filteredPets() {
 
 function filteredClubinhoPets() {
   const searchTerm = normalizeSearch(DOM.clubinhoSearchInput?.value || "");
-  return state.data.pets.filter((pet) => {
+  return sortedPetsByName(state.data.pets).filter((pet) => {
     if (!pet.clubinho_enabled) return false;
     const terms = [pet.name, pet.tutor_name, pet.breed, pet.tutor_contact, pet.notes].join(" ");
     return includesSearch(terms, searchTerm);
@@ -2141,7 +2152,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260411-5", {
+    const registration = await navigator.serviceWorker.register("./sw.js?v=20260411-6", {
       updateViaCache: "none",
     });
     await registration.update();
