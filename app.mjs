@@ -188,6 +188,7 @@ const DOM = {
   appointmentDate: document.querySelector("#appointmentDate"),
   appointmentTime: document.querySelector("#appointmentTime"),
   appointmentAmountField: document.querySelector("#appointmentAmountField"),
+  appointmentAmountInput: document.querySelector("#appointmentAmountInput"),
   appointmentClubinhoToggleWrap: document.querySelector("#appointmentClubinhoToggleWrap"),
   appointmentClubinhoInput: document.querySelector("#appointmentClubinhoInput"),
   appointmentClubinhoFields: document.querySelector("#appointmentClubinhoFields"),
@@ -342,6 +343,59 @@ function formatPhoneBrazil(value) {
   if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
   if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function parseMoneyInput(value) {
+  const raw = String(value ?? "").replace(/[^\d,.-]/g, "").trim();
+  if (!raw) return null;
+
+  const lastComma = raw.lastIndexOf(",");
+  const lastDot = raw.lastIndexOf(".");
+  let normalized = raw;
+
+  if (lastComma > -1 && lastDot > -1) {
+    normalized = lastComma > lastDot ? raw.replace(/\./g, "").replace(",", ".") : raw.replace(/,/g, "");
+  } else if (lastComma > -1) {
+    normalized = raw.replace(/\./g, "").replace(",", ".");
+  } else {
+    normalized = raw.replace(/,/g, "");
+  }
+
+  const amount = Number.parseFloat(normalized);
+  return Number.isFinite(amount) ? Number(amount.toFixed(2)) : null;
+}
+
+function formatMoneyInputValue(value) {
+  const amount = typeof value === "number" ? value : parseMoneyInput(value);
+  if (amount === null) return "";
+  return amount.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function humanizeErrorMessage(error, fallback = "Não foi possível concluir essa ação.") {
+  const message = String(error?.message || "").trim();
+  if (!message) return fallback;
+
+  const normalized = message.toLowerCase();
+  if (normalized.includes("invalid input syntax for type numeric")) {
+    return "Confira o valor preenchido. Use números como 220 ou 220,00.";
+  }
+  if (normalized.includes("row-level security")) {
+    return "Sua conta não tem permissão para salvar isso agora. Entre novamente e tente de novo.";
+  }
+  if (normalized.includes("schema cache")) {
+    return "O banco do Supabase ainda não está com todos os campos novos do MIYO. Precisamos atualizar o banco.";
+  }
+  if (normalized.includes("failed to fetch") || normalized.includes("networkerror")) {
+    return "Não consegui falar com a nuvem agora. Confira sua internet e tente de novo.";
+  }
+  if (normalized.includes("duplicate key value")) {
+    return "Esse registro já existe na nuvem.";
+  }
+
+  return fallback;
 }
 
 function normalizeSearch(value) {
@@ -832,7 +886,7 @@ async function upsertEntity(table, payload) {
     return record;
   } catch (error) {
     console.error(error);
-    notify(error.message || "Não foi possível salvar esse registro.", "error");
+    notify(humanizeErrorMessage(error, "Não foi possível salvar esse registro."), "error");
     return null;
   }
 }
@@ -852,7 +906,7 @@ async function updateEntity(table, id, patch) {
     return true;
   } catch (error) {
     console.error(error);
-    notify(error.message || "Não foi possível atualizar esse registro.", "error");
+    notify(humanizeErrorMessage(error, "Não foi possível atualizar esse registro."), "error");
     return false;
   }
 }
@@ -884,7 +938,7 @@ async function deleteEntity(table, id) {
     return true;
   } catch (error) {
     console.error(error);
-    notify(error.message || "Não foi possível excluir esse registro.", "error");
+    notify(humanizeErrorMessage(error, "Não foi possível excluir esse registro."), "error");
     return false;
   }
 }
@@ -1271,6 +1325,7 @@ function resetPetForm() {
   populateBreedOptions();
   DOM.petTutorContact.value = "";
   DOM.petClubinhoPlan.value = "mensal";
+  DOM.petClubinhoPrice.value = "";
   DOM.petClubinhoAdhesionDate.value = todayKey();
   DOM.petFormTitle.textContent = "Novo pet";
   DOM.petFormSubmitButton.textContent = "Salvar pet";
@@ -1292,7 +1347,7 @@ function startPetEdit(petId) {
   DOM.petForm.elements.registration_date.value = pet.registration_date || todayKey();
   DOM.petForm.elements.clubinho_enabled.checked = Boolean(pet.clubinho_enabled);
   DOM.petForm.elements.clubinho_plan.value = pet.clubinho_plan || "mensal";
-  DOM.petForm.elements.clubinho_price.value = pet.clubinho_price ?? "";
+  DOM.petForm.elements.clubinho_price.value = formatMoneyInputValue(pet.clubinho_price);
   DOM.petForm.elements.clubinho_adhesion_date.value = pet.clubinho_adhesion_date || pet.registration_date || todayKey();
   DOM.petForm.elements.notes.value = pet.notes || "";
   DOM.petFormTitle.textContent = `Editando ${pet.name}`;
@@ -1614,6 +1669,9 @@ function resetAppointmentForm() {
   DOM.appointmentForm.reset();
   DOM.appointmentDate.value = todayKey();
   DOM.appointmentTime.value = "09:00";
+  if (DOM.appointmentAmountInput) {
+    DOM.appointmentAmountInput.value = "";
+  }
   state.appointmentFormOpen = false;
   renderServicePicker();
   syncAppointmentClubinhoUI();
@@ -1631,7 +1689,7 @@ async function handlePetSubmit(event) {
     registration_date: formData.get("registration_date").toString(),
     clubinho_enabled: formData.get("clubinho_enabled") === "on",
     clubinho_plan: formData.get("clubinho_enabled") === "on" ? formData.get("clubinho_plan").toString() : null,
-    clubinho_price: formData.get("clubinho_enabled") === "on" ? blankToNull(formData.get("clubinho_price")) : null,
+    clubinho_price: formData.get("clubinho_enabled") === "on" ? parseMoneyInput(formData.get("clubinho_price")) : null,
     clubinho_adhesion_date:
       formData.get("clubinho_enabled") === "on" ? formData.get("clubinho_adhesion_date").toString() : null,
     notes: blankToNull(formData.get("notes")),
@@ -1693,7 +1751,7 @@ async function handleAppointmentSubmit(event) {
     ),
     status: "agendado",
     service_items: services,
-    amount: isClubinho ? pet.clubinho_price : blankToNull(formData.get("amount")),
+    amount: isClubinho ? pet.clubinho_price : parseMoneyInput(formData.get("amount")),
     is_clubinho: isClubinho,
     clubinho_slot: isClubinho ? formData.get("clubinho_slot").toString() : null,
     notes: blankToNull(formData.get("notes")),
@@ -1748,7 +1806,7 @@ async function handleSignIn(event) {
   });
   if (error) {
     console.error(error);
-    notify(error.message || "Não foi possível entrar na conta.", "error");
+    notify(humanizeErrorMessage(error, "Não foi possível entrar na conta."), "error");
     return;
   }
   notify("Login realizado com sucesso.", "success");
@@ -1768,7 +1826,7 @@ async function handleSignUp() {
   const { error } = await state.supabase.auth.signUp({ email, password });
   if (error) {
     console.error(error);
-    notify(error.message || "Não foi possível criar a conta.", "error");
+    notify(humanizeErrorMessage(error, "Não foi possível criar a conta."), "error");
     return;
   }
   notify("Conta criada. Se o projeto exigir confirmação por e-mail, verifique sua caixa de entrada.", "success");
@@ -1779,7 +1837,7 @@ async function handleSignOut() {
   const { error } = await state.supabase.auth.signOut();
   if (error) {
     console.error(error);
-    notify(error.message || "Não foi possível sair da conta.", "error");
+    notify(humanizeErrorMessage(error, "Não foi possível sair da conta."), "error");
     return;
   }
   await refreshData({ silent: true });
@@ -1870,6 +1928,11 @@ function bindEvents() {
   });
   DOM.petTutorContact.addEventListener("input", () => {
     DOM.petTutorContact.value = formatPhoneBrazil(DOM.petTutorContact.value);
+  });
+  [DOM.petClubinhoPrice, DOM.appointmentAmountInput].filter(Boolean).forEach((input) => {
+    input.addEventListener("blur", () => {
+      input.value = formatMoneyInputValue(input.value);
+    });
   });
   DOM.petClubinhoInput.addEventListener("change", syncPetClubinhoFields);
   DOM.petRegistrationDate.addEventListener("change", () => {
@@ -2009,7 +2072,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260411-3", {
+    const registration = await navigator.serviceWorker.register("./sw.js?v=20260411-4", {
       updateViaCache: "none",
     });
     await registration.update();
