@@ -9,52 +9,46 @@
     >
     <meta name="theme-color" content="#1f5a52">
     <title>MIYO</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260411-1">
-    <link rel="icon" href="./assets/brand/logo-secundaria-turquesa.png?v=20260411-1" type="image/png">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260411-2">
+    <link rel="icon" href="./assets/brand/logo-secundaria-turquesa.png?v=20260411-2" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     >
-    <link rel="stylesheet" href="./styles.css?v=20260411-1">
-    <script defer src="./config.js?v=20260411-1"></script>
-    <script type="module" defer src="./app.mjs?v=20260411-1"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260411-2">
+    <script defer src="./config.js?v=20260411-2"></script>
+    <script type="module" defer src="./app.mjs?v=20260411-2"></script>
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <div class="brand-block">
-          <div class="brand-lockup">
-            <img class="brand-logo" src="./assets/brand/logo-secundaria-turquesa.png" alt="Logo MIYO">
-            <div>
-              <p class="eyebrow">MIYO</p>
-              <h1>MIYO</h1>
-              <p class="lede">
-                Banho, tosa e bem-estar animal com agenda, histórico
-                para cada pet.
-              </p>
-            </div>
+        <div class="brand-lockup">
+          <img class="brand-logo" src="./assets/brand/logo-secundaria-turquesa.png" alt="Logo MIYO">
+          <div class="brand-block">
+            <p class="eyebrow" id="headerSectionLabel">INÍCIO</p>
+            <h1>MIYO</h1>
           </div>
         </div>
 
         <div class="topbar-actions">
+          <span class="metric-pill header-date" id="todayLabel">Hoje</span>
           <button class="cloud-launch" id="cloudLaunchButton" type="button" title="Abrir nuvem" aria-label="Abrir nuvem">
-            <span aria-hidden="true">☁</span>
+            <span aria-hidden="true">&#9729;</span>
           </button>
-          <div class="status-cluster">
-            <span class="status-pill" id="storageModeBadge">Modo local</span>
-            <span class="status-pill soft" id="authModeBadge">Sem login</span>
-          </div>
-          <button class="ghost-button" id="syncButton" type="button">Atualizar dados</button>
-          <button class="primary-button" id="installButton" type="button" hidden>Instalar app</button>
+        </div>
+
+        <div class="sr-only" aria-hidden="true">
+          <span id="storageModeBadge">Local no navegador</span>
+          <span id="authModeBadge">Sem login</span>
+          <span id="cloudStateLabel">Sem sincronização</span>
         </div>
       </header>
 
       <div class="workspace">
         <aside class="sidebar">
           <div class="sidebar-card">
-            <p class="sidebar-title">Menu</p>
             <nav class="sidebar-nav">
               <button class="nav-item is-active" data-section="dashboard" type="button">INÍCIO</button>
               <button class="nav-item" data-section="agenda" type="button">AGENDA</button>
@@ -64,274 +58,247 @@
           </div>
 
           <div class="sidebar-card subtle">
-            <p class="sidebar-title">Operação do dia</p>
-            <p class="sidebar-note" id="sidebarSummary">O app está pronto para funcionar em modo local agora mesmo.</p>
+            <p class="sidebar-note" id="sidebarSummary">O MIYO está pronto para funcionar no dia a dia.</p>
           </div>
         </aside>
 
         <main class="content">
           <section class="panel is-active" data-panel="dashboard">
-            <article class="hero-card">
-              <div class="hero-brand">
-                <img class="hero-logo" src="./assets/brand/logo-secundaria-turquesa.png" alt="Logo MIYO">
-                <div>
-                  <p class="eyebrow">INÍCIO</p>
-                  <h2>MIYO</h2>
-                  <p class="hero-copy">Banho, tosa e bem-estar animal com uma agenda limpa e fichas completas para cada pet.</p>
-                </div>
-              </div>
-              <div class="hero-meta">
-                <span class="metric-pill" id="todayLabel">Hoje</span>
-                <span class="metric-pill soft" id="cloudStateLabel">Sem sincronização</span>
-              </div>
-            </article>
+            <div class="stats-grid dashboard-stats" id="statsGrid"></div>
 
-            <div class="stats-grid" id="statsGrid"></div>
-
-            <div class="two-column-grid">
-              <article class="card">
-                <div class="section-heading">
-                  <div>
-                    <p class="eyebrow">Atendimentos hoje</p>
-                    <h3>Quem chega hoje</h3>
-                  </div>
-                </div>
+            <div class="two-column-grid dashboard-feed">
+              <article class="card compact-card">
+                <h3>Quem chega hoje</h3>
                 <div class="stack-list" id="upcomingAppointments"></div>
               </article>
 
-              <article class="card">
-                <div class="section-heading">
-                  <div>
-                    <p class="eyebrow">Agenda</p>
-                    <h3>Próximos horários</h3>
-                  </div>
-                </div>
+              <article class="card compact-card">
+                <h3>Próximos atendimentos</h3>
                 <div class="stack-list" id="packageAlerts"></div>
               </article>
             </div>
           </section>
 
           <section class="panel" data-panel="agenda">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Agenda</p>
-                <h2>Agende por pet e marque exatamente o que foi feito</h2>
-              </div>
+            <div class="section-heading simple-heading">
+              <h2>Agenda</h2>
             </div>
 
-            <div class="two-column-grid align-start">
-              <article class="card appointment-card">
-                <h3>Novo agendamento</h3>
-                <p class="helper-text appointment-intro">Escolha o pet, marque o clubinho quando entrar no pacote e salve o atendimento sem ocupar espaço demais no celular.</p>
-                <form class="grid-form appointment-sheet" id="appointmentForm">
-                  <div class="form-cluster full-width">
-                    <div class="cluster-head">
-                      <span class="mini-label">Passo 1</span>
-                      <strong class="cluster-title">Pet e horário</strong>
-                      <span class="cluster-copy">Selecione o pet certo e veja o tutor logo abaixo.</span>
-                    </div>
-                    <div class="form-subgrid">
-                      <label class="full-width">
-                        Pet
-                        <select name="pet_id" id="appointmentPetId" required></select>
-                        <span class="field-hint" id="appointmentPetPreview">Selecione um pet para ver o tutor.</span>
-                      </label>
-                      <label>
-                        Data
-                        <input type="date" name="appointment_date" id="appointmentDate" required>
-                      </label>
-                      <label>
-                        Hora
-                        <input type="time" name="appointment_time" id="appointmentTime" required>
-                      </label>
-                    </div>
-                  </div>
-                  <div class="form-cluster form-cluster-soft full-width">
-                    <div class="cluster-head">
-                      <span class="mini-label">Passo 2</span>
-                      <strong class="cluster-title">Cobrança e clubinho</strong>
-                      <span class="cluster-copy">Use valor manual só quando o atendimento não entrar no pacote.</span>
-                    </div>
-                    <div class="form-subgrid">
-                      <label id="appointmentAmountField">
-                    Valor manual
-                    <input type="number" name="amount" min="0" step="0.01" placeholder="0.00">
-                  </label>
-                  <label class="clubinho-toggle full-width" id="appointmentClubinhoToggleWrap" hidden>
-                    Clubinho MIYO
-                    <span class="clubinho-inline">
-                      <input type="checkbox" name="is_clubinho" id="appointmentClubinhoInput">
-                      <span class="clubinho-star" aria-hidden="true">&#9733;</span>
-                      <span>Lançar este atendimento como clubinho</span>
-                    </span>
-                  </label>
-                  <div class="clubinho-config full-width" id="appointmentClubinhoFields" hidden>
-                    <label>
-                      Banho do ciclo
-                      <select name="clubinho_slot" id="appointmentClubinhoSlot"></select>
-                    </label>
-                    <div class="helper-block clubinho-amount-card">
-                      <span class="mini-label">Cobrança automática</span>
-                      <span class="muted" id="appointmentClubinhoAmountHint">O valor do pacote será usado.</span>
-                    </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="form-cluster full-width">
-                    <div class="cluster-head">
-                      <span class="mini-label">Passo 3</span>
-                      <strong class="cluster-title">Serviços e observações</strong>
-                      <span class="cluster-copy">Adicione só o que foi feito e use observações apenas quando precisar.</span>
-                    </div>
-                    <div class="form-subgrid">
-                      <label class="full-width">
-                    Serviços
-                    <div class="service-picker compact-picker" id="servicePicker">
-                      <div class="service-inline-bar">
-                        <select id="serviceSelectInput">
-                          <option value="">Selecione um serviço</option>
-                        </select>
-                        <button class="secondary-button" id="serviceAddButton" type="button">Adicionar</button>
-                      </div>
-                      <div class="selected-services" id="selectedServices"></div>
-                    </div>
-                  </label>
-                  <label class="full-width">
-                    Observações
-                    <textarea name="notes" rows="3" placeholder="Ex.: comportamento, recados do tutor ou detalhes do atendimento."></textarea>
-                  </label>
-                    </div>
-                  </div>
-
-                  <button class="primary-button full-width appointment-submit" type="submit">Salvar agendamento</button>
-                </form>
-              </article>
-
-              <article class="card">
-                <div class="toolbar toolbar-agenda">
-                  <label class="full-width">
-                    Pesquisar na agenda
-                    <input type="search" id="agendaSearchInput" placeholder="Buscar por pet, tutor, serviço ou observação">
-                  </label>
-                  <label>
-                    Data de referência
-                    <input type="date" id="agendaDateFilter">
-                  </label>
-                  <div class="helper-block">
-                    <span class="mini-label">Visualização</span>
-                    <span class="muted" id="agendaRangeLabel">Agenda do dia.</span>
-                  </div>
-                </div>
+            <article class="card calendar-card">
+              <div class="calendar-toolbar">
                 <div class="scope-switch" aria-label="Período da agenda">
                   <button class="scope-chip is-active" data-agenda-scope="day" type="button">Dia</button>
                   <button class="scope-chip" data-agenda-scope="week" type="button">Semana</button>
                   <button class="scope-chip" data-agenda-scope="month" type="button">Mês</button>
-                  <button class="scope-chip" data-agenda-scope="year" type="button">Ano</button>
                 </div>
-                <div class="stats-grid compact" id="agendaSummaryGrid"></div>
-                <div class="table-shell">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Data</th>
-                        <th>Dia</th>
-                        <th>Horário</th>
-                        <th>Pet</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody id="appointmentsTableBody"></tbody>
-                  </table>
+
+                <div class="calendar-nav">
+                  <button class="ghost-button calendar-nav-button" id="agendaPrevButton" type="button" aria-label="Período anterior">&#8249;</button>
+                  <strong id="agendaCalendarLabel">Hoje</strong>
+                  <button class="ghost-button calendar-nav-button" id="agendaNextButton" type="button" aria-label="Próximo período">&#8250;</button>
                 </div>
-              </article>
+              </div>
+
+              <input type="date" id="agendaDateFilter" hidden>
+              <div class="calendar-weekdays" id="agendaWeekdays"></div>
+              <div class="agenda-calendar" id="agendaCalendarGrid"></div>
+
+              <div class="agenda-results-head">
+                <strong id="agendaRangeLabel">Agenda do dia.</strong>
+                <label class="search-inline compact-search">
+                  Pesquisar
+                  <input type="search" id="agendaSearchInput" placeholder="Pet, tutor, serviço ou observação">
+                </label>
+              </div>
+
+              <div class="stats-grid compact agenda-summary" id="agendaSummaryGrid"></div>
+
+              <div class="table-shell">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Dia</th>
+                      <th>Horário</th>
+                      <th>Pet</th>
+                      <th>Status</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="appointmentsTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <div class="panel-toggle-row">
+              <button class="primary-button panel-toggle" id="appointmentToggleButton" type="button">Novo agendamento</button>
             </div>
+
+            <article class="card collapsible-card" id="appointmentCard" hidden>
+              <h3>Novo agendamento</h3>
+              <form class="grid-form appointment-sheet" id="appointmentForm">
+                <div class="form-cluster full-width">
+                  <div class="cluster-head">
+                    <strong class="cluster-title">Pet e horário</strong>
+                  </div>
+                  <div class="form-subgrid">
+                    <label class="full-width">
+                      Pet
+                      <select name="pet_id" id="appointmentPetId" required></select>
+                      <span class="field-hint" id="appointmentPetPreview">Selecione um pet para ver o tutor.</span>
+                    </label>
+                    <label>
+                      Data
+                      <input type="date" name="appointment_date" id="appointmentDate" required>
+                    </label>
+                    <label>
+                      Hora
+                      <input type="time" name="appointment_time" id="appointmentTime" required>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-cluster form-cluster-soft full-width">
+                  <div class="cluster-head">
+                    <strong class="cluster-title">Cobrança</strong>
+                  </div>
+                  <div class="form-subgrid">
+                    <label id="appointmentAmountField">
+                      Valor manual
+                      <input type="number" name="amount" min="0" step="0.01" placeholder="0.00">
+                    </label>
+                    <label class="clubinho-toggle full-width" id="appointmentClubinhoToggleWrap" hidden>
+                      Clubinho MIYO
+                      <span class="clubinho-inline">
+                        <input type="checkbox" name="is_clubinho" id="appointmentClubinhoInput">
+                        <span class="clubinho-star" aria-hidden="true">&#9733;</span>
+                        <span>Lançar este atendimento como clubinho</span>
+                      </span>
+                    </label>
+                    <div class="clubinho-config full-width" id="appointmentClubinhoFields" hidden>
+                      <label>
+                        Banho do ciclo
+                        <select name="clubinho_slot" id="appointmentClubinhoSlot"></select>
+                      </label>
+                      <div class="helper-block clubinho-amount-card">
+                        <span class="mini-label">Cobrança automática</span>
+                        <span class="muted" id="appointmentClubinhoAmountHint">O valor do pacote será usado.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-cluster full-width">
+                  <div class="cluster-head">
+                    <strong class="cluster-title">Serviços</strong>
+                  </div>
+                  <div class="form-subgrid">
+                    <label class="full-width">
+                      Serviço
+                      <div class="service-picker compact-picker" id="servicePicker">
+                        <div class="service-inline-bar">
+                          <select id="serviceSelectInput">
+                            <option value="">Selecione um serviço</option>
+                          </select>
+                          <button class="secondary-button" id="serviceAddButton" type="button">Adicionar</button>
+                        </div>
+                        <div class="selected-services" id="selectedServices"></div>
+                      </div>
+                    </label>
+                    <label class="full-width">
+                      Observações
+                      <textarea name="notes" rows="3" placeholder="Se precisar, deixe um recado do atendimento."></textarea>
+                    </label>
+                  </div>
+                </div>
+
+                <button class="primary-button full-width appointment-submit" type="submit">Salvar agendamento</button>
+              </form>
+            </article>
           </section>
 
           <section class="panel" data-panel="pets">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Pets</p>
-                <h2>Cadastre o pet e concentre toda a ficha dele em um só lugar</h2>
-              </div>
+            <div class="section-heading simple-heading">
+              <h2>Pets</h2>
             </div>
 
-            <div class="two-column-grid align-start">
-              <article class="card">
-                <h3 id="petFormTitle">Novo pet</h3>
-                <form class="grid-form" id="petForm">
-                  <label>
-                    Nome do pet
-                    <input type="text" name="name" placeholder="Ex.: Mel" required>
-                  </label>
-                  <label>
-                    Nome do tutor
-                    <input type="text" name="tutor_name" placeholder="Ex.: Fernanda Souza" required>
-                  </label>
-                  <label>
-                    Raça
-                    <input type="text" name="breed" placeholder="Ex.: Shih-tzu">
-                  </label>
-                  <label>
-                    Contato do tutor
-                    <input type="text" name="tutor_contact" placeholder="WhatsApp ou telefone">
-                  </label>
-                  <label>
-                    Data de cadastro
-                    <input type="date" name="registration_date" id="petRegistrationDate" required>
-                  </label>
-                  <label class="clubinho-toggle">
-                    Clubinho MIYO
-                    <span class="clubinho-inline">
-                      <input type="checkbox" name="clubinho_enabled" id="petClubinhoInput">
-                      <span class="clubinho-star" aria-hidden="true">&#9733;</span>
-                      <span>Sinalizar como Clubinho</span>
-                    </span>
-                  </label>
-                  <div class="clubinho-config full-width" id="petClubinhoFields" hidden>
-                    <label>
-                      Tipo do clubinho
-                      <select name="clubinho_plan" id="petClubinhoPlan">
-                        <option value="mensal">Mensal • 4 banhos</option>
-                        <option value="quinzenal">Quinzenal • 2 banhos</option>
-                      </select>
-                    </label>
-                    <label>
-                      Valor do pacote
-                      <input type="number" name="clubinho_price" id="petClubinhoPrice" min="0" step="0.01" placeholder="0.00">
-                    </label>
-                    <label>
-                      Adesão do clubinho
-                      <input type="date" name="clubinho_adhesion_date" id="petClubinhoAdhesionDate">
-                    </label>
-                  </div>
-                  <label class="full-width">
-                    Observações
-                    <textarea name="notes" rows="3" placeholder="Ex.: pele sensível, não secar muito perto do rosto."></textarea>
-                  </label>
-                  <div class="button-row full-width">
-                    <button class="primary-button" id="petFormSubmitButton" type="submit">Salvar pet</button>
-                    <button class="secondary-button" id="petFormCancelButton" type="button" hidden>Cancelar edição</button>
-                  </div>
-                </form>
-              </article>
+            <article class="card tools-card">
+              <label class="search-inline full-width">
+                Pesquisar pets
+                <input type="search" id="petsSearchInput" placeholder="Pet, tutor, raça ou contato">
+              </label>
+              <button class="primary-button panel-toggle" id="petFormToggleButton" type="button">Cadastrar pet</button>
+            </article>
 
-              <article class="card">
+            <article class="card collapsible-card" id="petFormCard" hidden>
+              <h3 id="petFormTitle">Novo pet</h3>
+              <form class="grid-form" id="petForm">
+                <label>
+                  Nome do pet
+                  <input type="text" name="name" placeholder="Ex.: Mel" required>
+                </label>
+                <label>
+                  Nome do tutor
+                  <input type="text" name="tutor_name" placeholder="Ex.: Fernanda Souza" required>
+                </label>
+                <label>
+                  Raça
+                  <input type="text" name="breed" placeholder="Ex.: Shih-tzu">
+                </label>
+                <label>
+                  Contato do tutor
+                  <input type="text" name="tutor_contact" placeholder="WhatsApp ou telefone">
+                </label>
+                <label>
+                  Data de cadastro
+                  <input type="date" name="registration_date" id="petRegistrationDate" required>
+                </label>
+                <label class="clubinho-toggle">
+                  Clubinho MIYO
+                  <span class="clubinho-inline">
+                    <input type="checkbox" name="clubinho_enabled" id="petClubinhoInput">
+                    <span class="clubinho-star" aria-hidden="true">&#9733;</span>
+                    <span>Sinalizar como Clubinho</span>
+                  </span>
+                </label>
+                <div class="clubinho-config full-width" id="petClubinhoFields" hidden>
+                  <label>
+                    Tipo do clubinho
+                    <select name="clubinho_plan" id="petClubinhoPlan">
+                      <option value="mensal">Mensal • 4 banhos</option>
+                      <option value="quinzenal">Quinzenal • 2 banhos</option>
+                    </select>
+                  </label>
+                  <label>
+                    Valor do pacote
+                    <input type="number" name="clubinho_price" id="petClubinhoPrice" min="0" step="0.01" placeholder="0.00">
+                  </label>
+                  <label>
+                    Adesão do clubinho
+                    <input type="date" name="clubinho_adhesion_date" id="petClubinhoAdhesionDate">
+                  </label>
+                </div>
+                <label class="full-width">
+                  Observações
+                  <textarea name="notes" rows="3" placeholder="Se precisar, deixe observações do pet."></textarea>
+                </label>
+                <div class="button-row full-width">
+                  <button class="primary-button" id="petFormSubmitButton" type="submit">Salvar pet</button>
+                  <button class="secondary-button" id="petFormCancelButton" type="button" hidden>Cancelar edição</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="card collapsible-card" id="petDetailsCard" hidden>
+              <div class="card-head-inline">
                 <h3>Ficha do pet</h3>
-                <div id="petDetailsPanel"></div>
-              </article>
-            </div>
+                <button class="secondary-button slim-button" id="petDetailsCloseButton" type="button">Fechar ficha</button>
+              </div>
+              <div id="petDetailsPanel"></div>
+            </article>
 
             <article class="card">
-              <div class="section-heading">
-                <div>
-                  <h3>Pets cadastrados</h3>
-                </div>
-                <label class="search-inline">
-                  Pesquisar
-                  <input type="search" id="petsSearchInput" placeholder="Buscar por pet, tutor, raça ou contato">
-                </label>
-              </div>
+              <h3>Pets cadastrados</h3>
               <div class="table-shell">
                 <table>
                   <thead>
@@ -350,34 +317,25 @@
           </section>
 
           <section class="panel" data-panel="clubinho">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Clubinho MIYO</p>
-                <h2>Acompanhe os pets do clubinho e o andamento do ciclo</h2>
-              </div>
+            <div class="section-heading simple-heading">
+              <h2>Clubinho MIYO</h2>
             </div>
 
+            <article class="card tools-card">
+              <label class="search-inline full-width">
+                Pesquisar no Clubinho MIYO
+                <input type="search" id="clubinhoSearchInput" placeholder="Pet, tutor ou raça">
+              </label>
+            </article>
+
             <article class="card">
-              <div class="toolbar toolbar-clubinho">
-                <label class="full-width">
-                  Pesquisar no Clubinho MIYO
-                  <input type="search" id="clubinhoSearchInput" placeholder="Buscar por pet, tutor ou raça">
-                </label>
-                <div class="helper-block">
-                  <span class="mini-label">Planos</span>
-                  <span class="muted">Mensal: 4 banhos + extras. Quinzenal: 2 banhos por ciclo.</span>
-                </div>
-              </div>
               <div class="clubinho-grid" id="clubinhoGrid"></div>
             </article>
           </section>
 
           <section class="panel" data-panel="cloud">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Nuvem e instalação</p>
-                <h2>Sincronize seus dados e use como app em qualquer dispositivo</h2>
-              </div>
+            <div class="section-heading simple-heading">
+              <h2>Nuvem</h2>
             </div>
 
             <div class="two-column-grid align-start">
@@ -394,8 +352,7 @@
                   </div>
                 </div>
                 <p class="helper-text" id="cloudSummary">
-                  Você já pode testar tudo agora. Quando ativar o Supabase, os dados passam a
-                  sincronizar entre celular e Windows.
+                  Seus dados podem funcionar no modo local ou sincronizados pela nuvem.
                 </p>
               </article>
 
@@ -422,7 +379,7 @@
 
             <div class="two-column-grid align-start">
               <article class="card">
-                <h3>Acessar a conta</h3>
+                <h3>Conta</h3>
                 <form class="grid-form" id="authForm">
                   <label>
                     E-mail
@@ -441,16 +398,14 @@
               </article>
 
               <article class="card">
-                <h3>Backup e instalação</h3>
+                <h3>App e dados</h3>
                 <div class="button-column">
+                  <button class="ghost-button" id="syncButton" type="button">Atualizar dados</button>
+                  <button class="primary-button" id="installButton" type="button" hidden>Instalar app</button>
                   <button class="ghost-button" id="exportDataButton" type="button">Exportar dados locais em JSON</button>
                   <button class="ghost-button" id="importDataButton" type="button">Importar dados locais</button>
                   <button class="secondary-button" id="resetDemoButton" type="button">Restaurar demo local</button>
                 </div>
-                <p class="helper-text">
-                  Para instalar no celular ou no Windows, abra este site no navegador e use
-                  “Instalar app” ou “Adicionar à tela inicial”.
-                </p>
                 <input id="importFileInput" type="file" accept="application/json" hidden>
               </article>
             </div>

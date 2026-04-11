@@ -41,15 +41,25 @@ const STATUS_LABELS = {
   realizado: "Realizado",
   cancelado: "Cancelado",
 };
+const SECTION_LABELS = {
+  dashboard: "INÍCIO",
+  agenda: "AGENDA",
+  pets: "PETS",
+  clubinho: "CLUBINHO MIYO",
+  cloud: "NUVEM",
+};
 
 const DOM = {
   navItems: [...document.querySelectorAll(".nav-item")],
   panels: [...document.querySelectorAll(".panel")],
+  headerSectionLabel: document.querySelector("#headerSectionLabel"),
   statsGrid: document.querySelector("#statsGrid"),
   todayList: document.querySelector("#upcomingAppointments"),
   upcomingList: document.querySelector("#packageAlerts"),
   petsTableBody: document.querySelector("#petsTableBody"),
   petDetailsPanel: document.querySelector("#petDetailsPanel"),
+  petDetailsCard: document.querySelector("#petDetailsCard"),
+  petDetailsCloseButton: document.querySelector("#petDetailsCloseButton"),
   clubinhoGrid: document.querySelector("#clubinhoGrid"),
   appointmentsTableBody: document.querySelector("#appointmentsTableBody"),
   sidebarSummary: document.querySelector("#sidebarSummary"),
@@ -61,6 +71,8 @@ const DOM = {
   cloudStateLabel: document.querySelector("#cloudStateLabel"),
   todayLabel: document.querySelector("#todayLabel"),
   cloudLaunchButton: document.querySelector("#cloudLaunchButton"),
+  appointmentToggleButton: document.querySelector("#appointmentToggleButton"),
+  appointmentCard: document.querySelector("#appointmentCard"),
   appointmentForm: document.querySelector("#appointmentForm"),
   appointmentPetId: document.querySelector("#appointmentPetId"),
   appointmentPetPreview: document.querySelector("#appointmentPetPreview"),
@@ -77,10 +89,17 @@ const DOM = {
   agendaRangeLabel: document.querySelector("#agendaRangeLabel"),
   agendaSummaryGrid: document.querySelector("#agendaSummaryGrid"),
   agendaScopeButtons: [...document.querySelectorAll("[data-agenda-scope]")],
+  agendaPrevButton: document.querySelector("#agendaPrevButton"),
+  agendaNextButton: document.querySelector("#agendaNextButton"),
+  agendaCalendarLabel: document.querySelector("#agendaCalendarLabel"),
+  agendaCalendarGrid: document.querySelector("#agendaCalendarGrid"),
+  agendaWeekdays: document.querySelector("#agendaWeekdays"),
   servicePicker: document.querySelector("#servicePicker"),
   serviceSelectInput: document.querySelector("#serviceSelectInput"),
   serviceAddButton: document.querySelector("#serviceAddButton"),
   selectedServices: document.querySelector("#selectedServices"),
+  petFormToggleButton: document.querySelector("#petFormToggleButton"),
+  petFormCard: document.querySelector("#petFormCard"),
   petForm: document.querySelector("#petForm"),
   petFormTitle: document.querySelector("#petFormTitle"),
   petFormSubmitButton: document.querySelector("#petFormSubmitButton"),
@@ -122,6 +141,10 @@ const state = {
   editingPetId: null,
   agendaScope: "day",
   selectedServiceItems: [],
+  appointmentFormOpen: false,
+  petFormOpen: false,
+  petDetailsOpen: false,
+  selectedClubinhoCardId: null,
 };
 
 function emptyDb() {
@@ -304,6 +327,80 @@ function agendaRange(anchorValue = DOM.agendaDateFilter?.value || todayKey(), sc
   }
 
   return { start, end, label };
+}
+
+function agendaAnchorDate() {
+  return asDateOnly(DOM.agendaDateFilter?.value || todayKey());
+}
+
+function formatShortCalendarDate(value) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+  }).format(new Date(value));
+}
+
+function agendaCalendarModel(anchorValue = DOM.agendaDateFilter?.value || todayKey(), scope = state.agendaScope) {
+  const anchor = asDateOnly(anchorValue);
+  const weekdayLabels = Array.from({ length: 7 }, (_item, index) =>
+    new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(addDays(startOfWeek(anchor), index)),
+  );
+
+  if (scope === "month") {
+    const monthStart = startOfMonth(anchor);
+    const gridStart = startOfWeek(monthStart);
+    const monthEnd = addMonths(monthStart, 1);
+    const days = [];
+
+    for (let cursor = new Date(gridStart); cursor < monthEnd || cursor.getDay() !== 1; cursor = addDays(cursor, 1)) {
+      const key = localDateKeyFromValue(cursor.toISOString());
+      const count = state.data.appointments.filter((item) =>
+        item.status !== "cancelado" && localDateKeyFromValue(item.appointment_at) === key
+      ).length;
+      days.push({
+        key,
+        label: String(cursor.getDate()),
+        date: new Date(cursor),
+        outside: cursor.getMonth() !== anchor.getMonth(),
+        count,
+      });
+      if (days.length >= 42 && cursor >= monthEnd) break;
+    }
+
+    return {
+      label: formatMonthYear(anchor),
+      weekdays: weekdayLabels,
+      days,
+      mode: "month",
+    };
+  }
+
+  const start = startOfWeek(anchor);
+  const days = Array.from({ length: 7 }, (_item, index) => {
+    const date = addDays(start, index);
+    const key = localDateKeyFromValue(date.toISOString());
+    const count = state.data.appointments.filter((item) =>
+      item.status !== "cancelado" && localDateKeyFromValue(item.appointment_at) === key
+    ).length;
+    return {
+      key,
+      label: String(date.getDate()),
+      shortLabel: new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(date),
+      date,
+      outside: false,
+      count,
+    };
+  });
+
+  return {
+    label:
+      scope === "week"
+        ? `${formatShortCalendarDate(start)} - ${formatShortCalendarDate(addDays(start, 6))}`
+        : "Escolha o dia",
+    weekdays: weekdayLabels,
+    days,
+    mode: scope,
+  };
 }
 
 function initials(value) {
@@ -820,9 +917,9 @@ function todayAppointments() {
 }
 
 function futureAppointments(limit = 6) {
-  const now = new Date();
+  const tomorrow = addDays(startOfDay(new Date()), 1);
   return state.data.appointments
-    .filter((item) => new Date(item.appointment_at) >= now && item.status !== "cancelado")
+    .filter((item) => new Date(item.appointment_at) >= tomorrow && item.status !== "cancelado")
     .slice(0, limit);
 }
 
@@ -952,6 +1049,87 @@ function filteredClubinhoPets() {
   });
 }
 
+function setAgendaAnchor(value) {
+  DOM.agendaDateFilter.value = value;
+  renderAppointmentsTable();
+}
+
+function shiftAgendaAnchor(direction) {
+  const current = agendaAnchorDate();
+  let next = current;
+
+  if (state.agendaScope === "month") {
+    next = addMonths(current, direction);
+  } else if (state.agendaScope === "week") {
+    next = addDays(current, direction * 7);
+  } else {
+    next = addDays(current, direction);
+  }
+
+  setAgendaAnchor(localDateKeyFromValue(next.toISOString()));
+}
+
+function syncDisclosureButtons() {
+  if (DOM.appointmentCard && DOM.appointmentToggleButton) {
+    DOM.appointmentCard.hidden = !state.appointmentFormOpen;
+    DOM.appointmentToggleButton.textContent = state.appointmentFormOpen ? "Fechar agendamento" : "Novo agendamento";
+  }
+
+  if (DOM.petFormCard && DOM.petFormToggleButton) {
+    DOM.petFormCard.hidden = !state.petFormOpen;
+    DOM.petFormToggleButton.textContent = state.petFormOpen ? "Fechar cadastro" : "Cadastrar pet";
+  }
+
+  if (DOM.petDetailsCard) {
+    DOM.petDetailsCard.hidden = !state.petDetailsOpen;
+  }
+}
+
+function renderAgendaCalendar() {
+  const model = agendaCalendarModel();
+  const selectedKey = DOM.agendaDateFilter?.value || todayKey();
+  const today = todayKey();
+
+  if (DOM.agendaCalendarLabel) {
+    DOM.agendaCalendarLabel.textContent = model.label;
+  }
+
+  if (DOM.agendaWeekdays) {
+    DOM.agendaWeekdays.innerHTML = model.weekdays
+      .map((item) => `<span>${escapeHtml(item.replace(".", ""))}</span>`)
+      .join("");
+  }
+
+  if (!DOM.agendaCalendarGrid) return;
+
+  DOM.agendaCalendarGrid.dataset.mode = model.mode;
+  DOM.agendaCalendarGrid.innerHTML = model.days
+    .map((day) => {
+      const classes = [
+        "calendar-day",
+        day.key === selectedKey ? "is-selected" : "",
+        day.key === today ? "is-today" : "",
+        day.outside ? "is-outside" : "",
+        day.count ? "has-items" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      return `
+        <button class="${classes}" data-agenda-date="${escapeHtml(day.key)}" type="button">
+          <span class="calendar-day-top">
+            <span class="calendar-day-number">${escapeHtml(day.label)}</span>
+            ${day.count ? `<span class="calendar-day-count">${day.count}</span>` : ""}
+          </span>
+          <span class="calendar-day-label">${escapeHtml(
+            (day.shortLabel || new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(day.date)).replace(".", ""),
+          )}</span>
+        </button>
+      `;
+    })
+    .join("");
+}
+
 function resetPetForm() {
   state.editingPetId = null;
   DOM.petForm.reset();
@@ -961,13 +1139,16 @@ function resetPetForm() {
   DOM.petFormTitle.textContent = "Novo pet";
   DOM.petFormSubmitButton.textContent = "Salvar pet";
   DOM.petFormCancelButton.hidden = true;
+  state.petFormOpen = false;
   syncPetClubinhoFields();
+  syncDisclosureButtons();
 }
 
 function startPetEdit(petId) {
   const pet = getPet(petId);
   if (!pet) return;
   state.editingPetId = pet.id;
+  state.petFormOpen = true;
   DOM.petForm.elements.name.value = pet.name || "";
   DOM.petForm.elements.tutor_name.value = pet.tutor_name || "";
   DOM.petForm.elements.breed.value = pet.breed || "";
@@ -982,8 +1163,9 @@ function startPetEdit(petId) {
   DOM.petFormSubmitButton.textContent = "Salvar alterações";
   DOM.petFormCancelButton.hidden = false;
   syncPetClubinhoFields();
+  syncDisclosureButtons();
   openSection("pets");
-  DOM.petForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  DOM.petFormCard?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function renderDashboard() {
@@ -992,20 +1174,17 @@ function renderDashboard() {
   const clubinhoCount = state.data.pets.filter((pet) => pet.clubinho_enabled).length;
 
   DOM.statsGrid.innerHTML = `
-    <article class="stat-card">
-      <p>Atendimentos de hoje</p>
+    <article class="stat-card stat-card-compact">
+      <p>Atendimentos hoje</p>
       <strong>${todayItems.length}</strong>
-      <span>Agenda do dia</span>
     </article>
-    <article class="stat-card">
+    <article class="stat-card stat-card-compact">
       <p>Pets cadastrados</p>
       <strong>${state.data.pets.length}</strong>
-      <span>Fichas ativas no MIYO</span>
     </article>
-    <article class="stat-card">
+    <article class="stat-card stat-card-compact">
       <p>Clubinho MIYO</p>
       <strong>${clubinhoCount}</strong>
-      <span>Pets sinalizados com estrela</span>
     </article>
   `;
 
@@ -1045,28 +1224,11 @@ function renderDashboard() {
 function renderAppointmentsTable() {
   const rows = filteredAppointments();
   const range = agendaRange();
-  const confirmed = rows.filter((item) => item.status === "confirmado").length;
-  const done = rows.filter((item) => item.status === "realizado").length;
-  const clubinhoCount = rows.filter((item) => item.is_clubinho).length;
-
-  DOM.agendaRangeLabel.textContent = range.label;
-  DOM.agendaSummaryGrid.innerHTML = `
-    <article class="stat-card">
-      <p>Total no período</p>
-      <strong>${rows.length}</strong>
-      <span>${state.agendaScope === "day" ? "Agenda do dia" : "Agenda filtrada"}</span>
-    </article>
-    <article class="stat-card">
-      <p>Confirmados e concluídos</p>
-      <strong>${confirmed + done}</strong>
-      <span>${confirmed} confirmados • ${done} concluídos</span>
-    </article>
-    <article class="stat-card">
-      <p>Clubinho MIYO</p>
-      <strong>${clubinhoCount}</strong>
-      <span>Atendimentos de pets do clubinho</span>
-    </article>
-  `;
+  DOM.agendaRangeLabel.textContent = rows.length
+    ? `${range.label} ${rows.length === 1 ? "• 1 atendimento" : `• ${rows.length} atendimentos`}`
+    : range.label;
+  DOM.agendaSummaryGrid.innerHTML = "";
+  renderAgendaCalendar();
 
   DOM.appointmentsTableBody.innerHTML = rows.length
     ? rows
@@ -1131,7 +1293,9 @@ function renderPetsTable() {
 
 function renderPetDetails() {
   const pet = getPet(state.selectedPetId);
-  if (!pet) {
+  if (!pet || !state.petDetailsOpen) {
+    state.petDetailsOpen = false;
+    syncDisclosureButtons();
     DOM.petDetailsPanel.innerHTML = emptyState("Abra um pet para ver a ficha completa e o histórico de atendimentos.");
     return;
   }
@@ -1188,12 +1352,7 @@ function renderPetDetails() {
       ${pet.notes ? `<p class="helper-text">${escapeHtml(pet.notes)}</p>` : ""}
     </div>
     <div class="pet-history-block">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Histórico</p>
-          <h3>Atendimentos de ${escapeHtml(pet.name)}</h3>
-        </div>
-      </div>
+      <h3>Atendimentos de ${escapeHtml(pet.name)}</h3>
       ${
         history.length
           ? history.map((item) => `
@@ -1223,8 +1382,9 @@ function renderClubinhoBoard() {
         .map((pet) => {
           const summary = clubinhoProgress(pet.id);
           const plan = clubinhoPlanConfig(pet.clubinho_plan);
+          const isOpen = state.selectedClubinhoCardId === pet.id;
           return `
-            <article class="clubinho-card">
+            <article class="clubinho-card ${isOpen ? "is-open" : ""}">
               <div class="clubinho-card-head">
                 <div class="pet-identity">
                   ${petAvatarMarkup(pet)}
@@ -1234,6 +1394,7 @@ function renderClubinhoBoard() {
                   </div>
                 </div>
                 <div class="action-row">
+                  <button class="action-chip" data-toggle-clubinho="${pet.id}">${isOpen ? "Esconder andamento" : "Ver andamento"}</button>
                   <button class="action-chip" data-open-pet="${pet.id}">Abrir ficha</button>
                   <button class="action-chip" data-renew-clubinho="${pet.id}">Renovar</button>
                 </div>
@@ -1256,7 +1417,7 @@ function renderClubinhoBoard() {
                   <strong>${escapeHtml(formatDate(pet.clubinho_adhesion_date))}</strong>
                 </div>
               </div>
-              ${renderClubinhoProgress(pet.id)}
+              ${isOpen ? `<div class="clubinho-card-body">${renderClubinhoProgress(pet.id)}</div>` : ""}
             </article>
           `;
         })
@@ -1270,17 +1431,19 @@ function renderCloudState() {
   const storageLabel = logged ? "Nuvem sincronizada" : cloudReady ? "Supabase pronto" : "Local no navegador";
   const authLabel = logged ? state.session.user.email || "Conta conectada" : "Sem login";
 
-  DOM.storageModeBadge.textContent = storageLabel;
-  DOM.authModeBadge.textContent = authLabel;
+  if (DOM.storageModeBadge) DOM.storageModeBadge.textContent = storageLabel;
+  if (DOM.authModeBadge) DOM.authModeBadge.textContent = authLabel;
   DOM.cloudStorageState.textContent = storageLabel;
   DOM.cloudUserState.textContent = authLabel;
-  DOM.cloudStateLabel.textContent = logged ? "Sincronização ativa" : cloudReady ? "Faça login para sincronizar" : "Sem sincronização";
+  if (DOM.cloudStateLabel) {
+    DOM.cloudStateLabel.textContent = logged ? "Sincronização ativa" : storageLabel;
+  }
   DOM.cloudSummary.textContent = logged
     ? "Seus dados já estão sendo sincronizados entre os dispositivos em que você entrar com esta conta."
     : cloudReady
-      ? "A conexão com o Supabase está pronta. Faça login para começar a sincronização."
-      : "Você já pode usar o MIYO no modo local. Para sincronizar, configure o Supabase e faça login.";
-  DOM.sidebarSummary.textContent = `${state.data.pets.length} pets cadastrados, ${state.data.pets.filter((pet) => pet.clubinho_enabled).length} no Clubinho MIYO e ${state.data.appointments.length} atendimentos no histórico.`;
+      ? "A conexão com o Supabase está pronta."
+      : "Você já pode usar o MIYO no modo local.";
+  DOM.sidebarSummary.textContent = `${state.data.pets.length} pets • ${state.data.pets.filter((pet) => pet.clubinho_enabled).length} clubinho • ${state.data.appointments.length} atendimentos`;
   DOM.signOutButton.hidden = !logged;
   DOM.todayLabel.textContent = new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
@@ -1299,20 +1462,26 @@ function renderAll() {
   renderPetDetails();
   renderClubinhoBoard();
   renderCloudState();
+  syncDisclosureButtons();
 }
 
 function openSection(section) {
   state.section = section;
   DOM.navItems.forEach((button) => button.classList.toggle("is-active", button.dataset.section === section));
   DOM.panels.forEach((panel) => panel.classList.toggle("is-active", panel.dataset.panel === section));
+  if (DOM.headerSectionLabel) {
+    DOM.headerSectionLabel.textContent = SECTION_LABELS[section] || "MIYO";
+  }
 }
 
 function resetAppointmentForm() {
   DOM.appointmentForm.reset();
   DOM.appointmentDate.value = todayKey();
   DOM.appointmentTime.value = "09:00";
+  state.appointmentFormOpen = false;
   renderServicePicker();
   syncAppointmentClubinhoUI();
+  syncDisclosureButtons();
 }
 
 async function handlePetSubmit(event) {
@@ -1344,6 +1513,7 @@ async function handlePetSubmit(event) {
     const updated = await updateEntity("pets", state.editingPetId, payload);
     if (!updated) return;
     state.selectedPetId = state.editingPetId;
+    state.petDetailsOpen = true;
     resetPetForm();
     renderAll();
     notify("Ficha do pet atualizada com sucesso.", "success");
@@ -1352,8 +1522,9 @@ async function handlePetSubmit(event) {
 
   const saved = await upsertEntity("pets", payload);
   if (!saved) return;
-  resetPetForm();
   state.selectedPetId = saved.id;
+  state.petDetailsOpen = true;
+  resetPetForm();
   renderAll();
   notify("Pet salvo com sucesso.", "success");
 }
@@ -1418,7 +1589,7 @@ async function handleSaveCloudConfig(event) {
     await ensureSupabaseClient();
     await refreshData({ silent: true });
     renderAll();
-    notify("Supabase conectado. Agora faça login para sincronizar.", "success");
+    notify("Supabase conectado com sucesso.", "success");
   } catch (error) {
     console.error(error);
     resetCloudRuntime();
@@ -1533,6 +1704,22 @@ function bindEvents() {
       openSection(button.dataset.section);
     }),
   );
+  DOM.appointmentToggleButton.addEventListener("click", () => {
+    state.appointmentFormOpen = !state.appointmentFormOpen;
+    syncDisclosureButtons();
+    if (state.appointmentFormOpen) {
+      DOM.appointmentCard?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+  DOM.petFormToggleButton.addEventListener("click", () => {
+    state.petFormOpen = !state.petFormOpen;
+    if (!state.petFormOpen) {
+      resetPetForm();
+      return;
+    }
+    syncDisclosureButtons();
+    DOM.petFormCard?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   DOM.petForm.addEventListener("submit", handlePetSubmit);
   DOM.appointmentForm.addEventListener("submit", handleAppointmentSubmit);
   DOM.cloudConfigForm.addEventListener("submit", handleSaveCloudConfig);
@@ -1541,6 +1728,10 @@ function bindEvents() {
   DOM.signOutButton.addEventListener("click", handleSignOut);
   DOM.cloudLaunchButton.addEventListener("click", () => openSection("cloud"));
   DOM.petFormCancelButton.addEventListener("click", resetPetForm);
+  DOM.petDetailsCloseButton.addEventListener("click", () => {
+    state.petDetailsOpen = false;
+    syncDisclosureButtons();
+  });
   DOM.petClubinhoInput.addEventListener("change", syncPetClubinhoFields);
   DOM.petRegistrationDate.addEventListener("change", () => {
     if (!DOM.petClubinhoAdhesionDate.value || DOM.petClubinhoAdhesionDate.value === todayKey()) {
@@ -1563,6 +1754,8 @@ function bindEvents() {
   DOM.exportDataButton.addEventListener("click", exportCurrentData);
   DOM.importDataButton.addEventListener("click", () => DOM.importFileInput.click());
   DOM.importFileInput.addEventListener("change", handleImportFile);
+  DOM.agendaPrevButton.addEventListener("click", () => shiftAgendaAnchor(-1));
+  DOM.agendaNextButton.addEventListener("click", () => shiftAgendaAnchor(1));
   DOM.resetDemoButton.addEventListener("click", () => {
     if (state.session?.user) {
       notify("Saia da conta da nuvem para restaurar a demo local.", "warning");
@@ -1601,8 +1794,23 @@ function bindEvents() {
     const openPetButton = event.target.closest("[data-open-pet]");
     if (openPetButton) {
       state.selectedPetId = openPetButton.dataset.openPet;
+      state.petDetailsOpen = true;
       openSection("pets");
       renderPetDetails();
+      return;
+    }
+
+    const agendaDayButton = event.target.closest("[data-agenda-date]");
+    if (agendaDayButton) {
+      setAgendaAnchor(agendaDayButton.dataset.agendaDate);
+      return;
+    }
+
+    const toggleClubinhoButton = event.target.closest("[data-toggle-clubinho]");
+    if (toggleClubinhoButton) {
+      const petId = toggleClubinhoButton.dataset.toggleClubinho;
+      state.selectedClubinhoCardId = state.selectedClubinhoCardId === petId ? null : petId;
+      renderClubinhoBoard();
       return;
     }
 
@@ -1662,7 +1870,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260411-1", {
+    const registration = await navigator.serviceWorker.register("./sw.js?v=20260411-2", {
       updateViaCache: "none",
     });
     await registration.update();
