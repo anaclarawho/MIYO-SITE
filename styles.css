@@ -398,6 +398,55 @@ button {
   font-weight: 700;
 }
 
+.appointment-intro {
+  margin: 10px 0 0;
+}
+
+.appointment-sheet {
+  gap: 16px;
+}
+
+.form-cluster {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(17, 173, 187, 0.14);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(248, 253, 253, 0.7));
+}
+
+.form-cluster-soft {
+  background: linear-gradient(180deg, rgba(217, 244, 246, 0.52), rgba(255, 255, 255, 0.82));
+}
+
+.form-subgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.form-subgrid label.full-width,
+.form-subgrid .full-width {
+  grid-column: 1 / -1;
+}
+
+.cluster-head {
+  display: grid;
+  gap: 4px;
+}
+
+.cluster-title {
+  font-family: "Outfit", sans-serif;
+  font-size: 1.02rem;
+  letter-spacing: -0.02em;
+}
+
+.cluster-copy {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
 .clubinho-toggle {
   align-content: start;
 }
@@ -498,6 +547,12 @@ button {
 .field-hint strong {
   color: var(--text);
   font-size: 0.9rem;
+}
+
+.appointment-sheet .field-hint {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(217, 244, 246, 0.34);
 }
 
 input,
@@ -639,6 +694,10 @@ textarea {
 .selected-service-tag {
   border: 0;
   cursor: pointer;
+}
+
+.appointment-submit {
+  margin-top: 2px;
 }
 
 .service-option {
@@ -974,7 +1033,11 @@ tbody tr:hover {
   }
 
   .sidebar {
-    gap: 12px;
+    gap: 10px;
+    position: sticky;
+    top: 8px;
+    z-index: 12;
+    align-self: start;
   }
 
   .topbar,
@@ -988,14 +1051,14 @@ tbody tr:hover {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: 24px;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 20px;
   }
 
   .brand-lockup {
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: nowrap;
   }
 
@@ -1004,12 +1067,12 @@ tbody tr:hover {
   }
 
   .brand-logo {
-    width: 52px;
-    border-radius: 16px;
+    width: 42px;
+    border-radius: 14px;
   }
 
   .brand-block h1 {
-    font-size: 1.45rem;
+    font-size: 1.12rem;
     line-height: 1;
   }
 
@@ -1026,19 +1089,20 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 6px;
   }
 
   .cloud-launch {
-    width: 38px;
-    height: 38px;
-    font-size: 1rem;
+    width: 34px;
+    height: 34px;
+    font-size: 0.92rem;
   }
 
   #installButton {
     width: auto;
-    min-height: 38px;
-    padding: 0 12px;
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 0.76rem;
   }
 
   .status-pill,
@@ -1056,21 +1120,34 @@ tbody tr:hover {
     display: none;
   }
 
+  .sidebar-card {
+    padding: 10px;
+  }
+
   .sidebar-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
     gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .sidebar-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .nav-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    padding: 8px 10px;
-    font-size: 0.82rem;
+    flex: 0 0 auto;
+    width: auto;
+    min-width: max-content;
+    min-height: 38px;
+    padding: 0 14px;
+    font-size: 0.78rem;
     line-height: 1.2;
     text-align: center;
-    text-wrap: balance;
+    white-space: nowrap;
+    scroll-snap-align: start;
   }
 
   .hero-card {
@@ -1128,6 +1205,32 @@ tbody tr:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .appointment-intro {
+    display: none;
+  }
+
+  .appointment-sheet {
+    gap: 12px;
+  }
+
+  .form-cluster {
+    gap: 10px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .form-subgrid {
+    gap: 10px;
+  }
+
+  .cluster-title {
+    font-size: 0.96rem;
+  }
+
+  .cluster-copy {
+    font-size: 0.78rem;
+  }
+
   .toolbar label.full-width,
   .toolbar .full-width,
   .toolbar-clubinho .helper-block {
@@ -1138,22 +1241,45 @@ tbody tr:hover {
     padding: 12px 14px;
   }
 
+  .appointment-sheet .field-hint {
+    margin-top: 4px;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+  }
+
+  .clubinho-inline {
+    min-height: 46px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
   .service-inline-bar {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .scope-switch {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     gap: 8px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .scope-switch::-webkit-scrollbar {
+    display: none;
   }
 
   .scope-chip {
-    width: 100%;
+    width: auto;
+    min-width: max-content;
+    flex: 0 0 auto;
     min-height: 38px;
     padding: 0 12px;
     justify-content: center;
     font-size: 0.82rem;
+    scroll-snap-align: start;
   }
 
   input,
@@ -1163,7 +1289,7 @@ tbody tr:hover {
   }
 
   textarea {
-    min-height: 84px;
+    min-height: 72px;
   }
 
   .stat-card {
@@ -1256,7 +1382,22 @@ tbody tr:hover {
   .sidebar-card,
   .card,
   .hero-card {
-    padding: 14px;
+    padding: 12px;
+  }
+
+  .topbar {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .topbar-actions {
+    gap: 5px;
+  }
+
+  .cloud-launch {
+    width: 32px;
+    height: 32px;
+    font-size: 0.86rem;
   }
 
   .brand-lockup,
@@ -1267,12 +1408,12 @@ tbody tr:hover {
 
   .brand-logo,
   .hero-logo {
-    width: 44px;
-    border-radius: 14px;
+    width: 36px;
+    border-radius: 12px;
   }
 
   .brand-block h1 {
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
 
   .hero-copy {
@@ -1293,11 +1434,37 @@ tbody tr:hover {
   }
 
   .nav-item {
-    font-size: 0.78rem;
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 0.74rem;
   }
 
   .service-inline-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .form-cluster {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .form-subgrid {
     grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .cluster-copy {
+    display: none;
+  }
+
+  .appointment-sheet .field-hint {
+    padding: 7px 9px;
+  }
+
+  .appointment-submit {
+    position: sticky;
+    bottom: 8px;
+    z-index: 6;
   }
 
   td {
