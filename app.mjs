@@ -216,7 +216,8 @@ const DOM = {
   petFormSubmitButton: document.querySelector("#petFormSubmitButton"),
   petFormCancelButton: document.querySelector("#petFormCancelButton"),
   petRegistrationDate: document.querySelector("#petRegistrationDate"),
-  petTutorContact: document.querySelector("#petTutorContact"),
+  petContactList: document.querySelector("#petContactList"),
+  petAddContactButton: document.querySelector("#petAddContactButton"),
   petClubinhoInput: document.querySelector("#petClubinhoInput"),
   petClubinhoFields: document.querySelector("#petClubinhoFields"),
   petClubinhoPlan: document.querySelector("#petClubinhoPlan"),
@@ -343,6 +344,33 @@ function formatPhoneBrazil(value) {
   if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
   if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function parseTutorContacts(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => formatPhoneBrazil(item)).filter(Boolean);
+  }
+
+  const text = String(value ?? "").trim();
+  if (!text) return [];
+
+  return text
+    .split(/\s*\|\s*|\s*\/\s*|\n+/)
+    .map((item) => formatPhoneBrazil(item))
+    .filter(Boolean);
+}
+
+function serializeTutorContacts(values) {
+  const contacts = values
+    .map((item) => formatPhoneBrazil(item))
+    .filter(Boolean);
+
+  return contacts.length ? contacts.join(" | ") : null;
+}
+
+function tutorContactsText(value) {
+  const contacts = parseTutorContacts(value);
+  return contacts.length ? contacts.join(" • ") : "—";
 }
 
 function parseMoneyInput(value) {
@@ -707,7 +735,7 @@ function normalizeDb(raw) {
     return {
       ...pet,
       tutor_name: pet.tutor_name || tutor.name || "",
-      tutor_contact: pet.tutor_contact || tutor.phone || tutor.email || "",
+      tutor_contact: serializeTutorContacts(parseTutorContacts(pet.tutor_contact || tutor.phone || tutor.email || "")),
       registration_date: pet.registration_date || localDateKeyFromValue(pet.created_at || new Date().toISOString()),
       clubinho_enabled: Boolean(pet.clubinho_enabled ?? clubinhoPetIds.has(pet.id)),
       clubinho_plan: pet.clubinho_enabled ? pet.clubinho_plan || "mensal" : pet.clubinho_plan || null,
@@ -1318,12 +1346,38 @@ function renderAgendaCalendar() {
     .join("");
 }
 
+function contactFieldMarkup(value = "", index = 0) {
+  return `
+    <div class="contact-row">
+      <input
+        type="tel"
+        name="tutor_contact_item"
+        inputmode="numeric"
+        autocomplete="tel-national"
+        maxlength="15"
+        placeholder="(11) 99999-9999"
+        value="${escapeHtml(formatPhoneBrazil(value))}"
+      >
+      ${index > 0 ? `<button class="ghost-button slim-button" data-remove-contact="${index}" type="button">Remover</button>` : ""}
+    </div>
+  `;
+}
+
+function currentPetContactValues() {
+  return [...DOM.petContactList.querySelectorAll('input[name="tutor_contact_item"]')].map((input) => input.value);
+}
+
+function renderPetContactInputs(values = [""]) {
+  const contacts = values.length ? values : [""];
+  DOM.petContactList.innerHTML = contacts.map((value, index) => contactFieldMarkup(value, index)).join("");
+}
+
 function resetPetForm() {
   state.editingPetId = null;
   DOM.petForm.reset();
   DOM.petRegistrationDate.value = todayKey();
   populateBreedOptions();
-  DOM.petTutorContact.value = "";
+  renderPetContactInputs([""]);
   DOM.petClubinhoPlan.value = "mensal";
   DOM.petClubinhoPrice.value = "";
   DOM.petClubinhoAdhesionDate.value = todayKey();
@@ -1343,7 +1397,7 @@ function startPetEdit(petId) {
   DOM.petForm.elements.name.value = pet.name || "";
   DOM.petForm.elements.tutor_name.value = pet.tutor_name || "";
   populateBreedOptions(pet.breed || "");
-  DOM.petForm.elements.tutor_contact.value = formatPhoneBrazil(pet.tutor_contact || "");
+  renderPetContactInputs(parseTutorContacts(pet.tutor_contact));
   DOM.petForm.elements.registration_date.value = pet.registration_date || todayKey();
   DOM.petForm.elements.clubinho_enabled.checked = Boolean(pet.clubinho_enabled);
   DOM.petForm.elements.clubinho_plan.value = pet.clubinho_plan || "mensal";
@@ -1516,7 +1570,7 @@ function renderPetDetails() {
         </div>
         <div>
           <span class="mini-label">Contato</span>
-          <strong>${escapeHtml(pet.tutor_contact || "—")}</strong>
+          <strong>${escapeHtml(tutorContactsText(pet.tutor_contact))}</strong>
         </div>
         <div>
           <span class="mini-label">Cadastro</span>
@@ -1684,7 +1738,7 @@ async function handlePetSubmit(event) {
   const payload = {
     name: formData.get("name").toString().trim(),
     tutor_name: formData.get("tutor_name").toString().trim(),
-    tutor_contact: blankToNull(formatPhoneBrazil(formData.get("tutor_contact"))),
+    tutor_contact: serializeTutorContacts(currentPetContactValues()),
     breed: blankToNull(formData.get("breed")),
     registration_date: formData.get("registration_date").toString(),
     clubinho_enabled: formData.get("clubinho_enabled") === "on",
@@ -1926,8 +1980,15 @@ function bindEvents() {
     state.petDetailsOpen = false;
     syncDisclosureButtons();
   });
-  DOM.petTutorContact.addEventListener("input", () => {
-    DOM.petTutorContact.value = formatPhoneBrazil(DOM.petTutorContact.value);
+  DOM.petContactList.addEventListener("input", (event) => {
+    if (event.target.matches('input[name="tutor_contact_item"]')) {
+      event.target.value = formatPhoneBrazil(event.target.value);
+    }
+  });
+  DOM.petAddContactButton.addEventListener("click", () => {
+    renderPetContactInputs([...currentPetContactValues(), ""]);
+    const inputs = DOM.petContactList.querySelectorAll('input[name="tutor_contact_item"]');
+    inputs[inputs.length - 1]?.focus();
   });
   [DOM.petClubinhoPrice, DOM.appointmentAmountInput].filter(Boolean).forEach((input) => {
     input.addEventListener("blur", () => {
@@ -1990,6 +2051,14 @@ function bindEvents() {
     const removeServiceButton = event.target.closest("[data-remove-service]");
     if (removeServiceButton) {
       removeServiceItem(removeServiceButton.dataset.removeService);
+      return;
+    }
+
+    const removeContactButton = event.target.closest("[data-remove-contact]");
+    if (removeContactButton) {
+      const index = Number(removeContactButton.dataset.removeContact);
+      const nextContacts = currentPetContactValues().filter((_value, itemIndex) => itemIndex !== index);
+      renderPetContactInputs(nextContacts);
       return;
     }
 
@@ -2072,7 +2141,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260411-4", {
+    const registration = await navigator.serviceWorker.register("./sw.js?v=20260411-5", {
       updateViaCache: "none",
     });
     await registration.update();
