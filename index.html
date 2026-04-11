@@ -9,17 +9,17 @@
     >
     <meta name="theme-color" content="#1f5a52">
     <title>MIYO</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260411-2">
-    <link rel="icon" href="./assets/brand/logo-secundaria-turquesa.png?v=20260411-2" type="image/png">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260411-3">
+    <link rel="icon" href="./assets/brand/logo-secundaria-turquesa.png?v=20260411-3" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     >
-    <link rel="stylesheet" href="./styles.css?v=20260411-2">
-    <script defer src="./config.js?v=20260411-2"></script>
-    <script type="module" defer src="./app.mjs?v=20260411-2"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260411-3">
+    <script defer src="./config.js?v=20260411-3"></script>
+    <script type="module" defer src="./app.mjs?v=20260411-3"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -165,7 +165,10 @@
                   <div class="form-subgrid">
                     <label id="appointmentAmountField">
                       Valor manual
-                      <input type="number" name="amount" min="0" step="0.01" placeholder="0.00">
+                      <span class="money-field">
+                        <span class="currency-prefix">R$</span>
+                        <input type="number" name="amount" min="0" step="0.01" inputmode="decimal" lang="pt-BR" placeholder="0,00">
+                      </span>
                     </label>
                     <label class="clubinho-toggle full-width" id="appointmentClubinhoToggleWrap" hidden>
                       Clubinho MIYO
@@ -243,11 +246,21 @@
                 </label>
                 <label>
                   Raça
-                  <input type="text" name="breed" placeholder="Ex.: Shih-tzu">
+                  <select name="breed" id="petBreedSelect">
+                    <option value="">Selecione a raça</option>
+                  </select>
                 </label>
                 <label>
                   Contato do tutor
-                  <input type="text" name="tutor_contact" placeholder="WhatsApp ou telefone">
+                  <input
+                    type="tel"
+                    name="tutor_contact"
+                    id="petTutorContact"
+                    inputmode="numeric"
+                    autocomplete="tel-national"
+                    maxlength="15"
+                    placeholder="(11) 99999-9999"
+                  >
                 </label>
                 <label>
                   Data de cadastro
@@ -271,7 +284,19 @@
                   </label>
                   <label>
                     Valor do pacote
-                    <input type="number" name="clubinho_price" id="petClubinhoPrice" min="0" step="0.01" placeholder="0.00">
+                    <span class="money-field">
+                      <span class="currency-prefix">R$</span>
+                      <input
+                        type="number"
+                        name="clubinho_price"
+                        id="petClubinhoPrice"
+                        min="0"
+                        step="0.01"
+                        inputmode="decimal"
+                        lang="pt-BR"
+                        placeholder="0,00"
+                      >
+                    </span>
                   </label>
                   <label>
                     Adesão do clubinho

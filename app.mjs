@@ -12,6 +12,115 @@ const SERVICE_OPTIONS = [
   "Pintura",
   "Desembolo",
 ];
+const BREED_OPTIONS = [
+  "Affenpinscher",
+  "Airedale Terrier",
+  "Akita",
+  "Akita Americano",
+  "American Bully",
+  "American Staffordshire Terrier",
+  "Australian Cattle Dog",
+  "Australian Shepherd",
+  "Basenji",
+  "Basset Hound",
+  "Beagle",
+  "Bearded Collie",
+  "Bedlington Terrier",
+  "Bernese Mountain Dog",
+  "Bichon Frisé",
+  "Bloodhound",
+  "Boerboel",
+  "Border Collie",
+  "Border Terrier",
+  "Borzoi",
+  "Boston Terrier",
+  "Boxer",
+  "Buldogue Campeiro",
+  "Buldogue Francês",
+  "Buldogue Inglês",
+  "Bull Terrier",
+  "Cairn Terrier",
+  "Cane Corso",
+  "Cavalier King Charles Spaniel",
+  "Chesapeake Bay Retriever",
+  "Chihuahua",
+  "Chow Chow",
+  "Cocker Spaniel Americano",
+  "Cocker Spaniel Inglês",
+  "Collie",
+  "Dachshund",
+  "Dálmata",
+  "Dandie Dinmont Terrier",
+  "Doberman",
+  "Dogo Argentino",
+  "Dogue Alemão",
+  "Fila Brasileiro",
+  "Fox Paulistinha",
+  "Fox Terrier",
+  "Galgo Afegão",
+  "Golden Retriever",
+  "Gordon Setter",
+  "Greyhound",
+  "Griffon de Bruxelas",
+  "Husky Siberiano",
+  "Jack Russell Terrier",
+  "Kangal",
+  "Keeshond",
+  "Komondor",
+  "Kuvasz",
+  "Labrador Retriever",
+  "Lagotto Romagnolo",
+  "Lhasa Apso",
+  "Lulu da Pomerânia",
+  "Malamute do Alasca",
+  "Maltês",
+  "Mastiff",
+  "Mastim Napolitano",
+  "Mudi",
+  "Norfolk Terrier",
+  "Norwich Terrier",
+  "Old English Sheepdog",
+  "Papillon",
+  "Pastor Alemão",
+  "Pastor Australiano",
+  "Pastor Belga Groenendael",
+  "Pastor Belga Malinois",
+  "Pastor Belga Tervueren",
+  "Pastor Branco Suíço",
+  "Pastor de Brie",
+  "Pastor de Shetland",
+  "Pastor Maremano-Abruzês",
+  "Pequinês",
+  "Pinscher",
+  "Pit Bull Terrier",
+  "Pointer Inglês",
+  "Poodle",
+  "Pug",
+  "Rottweiler",
+  "Samoieda",
+  "São Bernardo",
+  "Schipperke",
+  "Schnauzer Gigante",
+  "Schnauzer Miniatura",
+  "Schnauzer Standard",
+  "Scottish Terrier",
+  "Sem raça definida (SRD)",
+  "Setter Inglês",
+  "Shar Pei",
+  "Shiba Inu",
+  "Shih Tzu",
+  "Spitz Alemão",
+  "Springer Spaniel Inglês",
+  "Staffordshire Bull Terrier",
+  "Terra-Nova",
+  "Weimaraner",
+  "Welsh Corgi Cardigan",
+  "Welsh Corgi Pembroke",
+  "West Highland White Terrier",
+  "Whippet",
+  "Xoloitzcuintli",
+  "Yorkshire Terrier",
+].sort((left, right) => left.localeCompare(right, "pt-BR"));
 const CLUBINHO_PLANS = {
   mensal: {
     key: "mensal",
@@ -98,6 +207,7 @@ const DOM = {
   serviceSelectInput: document.querySelector("#serviceSelectInput"),
   serviceAddButton: document.querySelector("#serviceAddButton"),
   selectedServices: document.querySelector("#selectedServices"),
+  petBreedSelect: document.querySelector("#petBreedSelect"),
   petFormToggleButton: document.querySelector("#petFormToggleButton"),
   petFormCard: document.querySelector("#petFormCard"),
   petForm: document.querySelector("#petForm"),
@@ -105,6 +215,7 @@ const DOM = {
   petFormSubmitButton: document.querySelector("#petFormSubmitButton"),
   petFormCancelButton: document.querySelector("#petFormCancelButton"),
   petRegistrationDate: document.querySelector("#petRegistrationDate"),
+  petTutorContact: document.querySelector("#petTutorContact"),
   petClubinhoInput: document.querySelector("#petClubinhoInput"),
   petClubinhoFields: document.querySelector("#petClubinhoFields"),
   petClubinhoPlan: document.querySelector("#petClubinhoPlan"),
@@ -218,6 +329,19 @@ function blankToNull(value) {
   if (value === undefined || value === null) return null;
   const text = String(value).trim();
   return text ? text : null;
+}
+
+function digitsOnly(value) {
+  return String(value ?? "").replace(/\D/g, "");
+}
+
+function formatPhoneBrazil(value) {
+  const digits = digitsOnly(value).slice(0, 11);
+  if (!digits) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
 function normalizeSearch(value) {
@@ -942,6 +1066,16 @@ function renderServicePicker(selectedItems = []) {
   DOM.serviceSelectInput.value = "";
 }
 
+function populateBreedOptions(selectedValue = "") {
+  const customBreed = selectedValue && !BREED_OPTIONS.includes(selectedValue) ? [selectedValue] : [];
+  const options = [...customBreed, ...BREED_OPTIONS];
+  DOM.petBreedSelect.innerHTML = `
+    <option value="">Selecione a raça</option>
+    ${options.map((breed) => `<option value="${escapeHtml(breed)}">${escapeHtml(breed)}</option>`).join("")}
+  `;
+  DOM.petBreedSelect.value = selectedValue || "";
+}
+
 function selectedServiceItems() {
   return [...state.selectedServiceItems];
 }
@@ -1134,6 +1268,8 @@ function resetPetForm() {
   state.editingPetId = null;
   DOM.petForm.reset();
   DOM.petRegistrationDate.value = todayKey();
+  populateBreedOptions();
+  DOM.petTutorContact.value = "";
   DOM.petClubinhoPlan.value = "mensal";
   DOM.petClubinhoAdhesionDate.value = todayKey();
   DOM.petFormTitle.textContent = "Novo pet";
@@ -1151,8 +1287,8 @@ function startPetEdit(petId) {
   state.petFormOpen = true;
   DOM.petForm.elements.name.value = pet.name || "";
   DOM.petForm.elements.tutor_name.value = pet.tutor_name || "";
-  DOM.petForm.elements.breed.value = pet.breed || "";
-  DOM.petForm.elements.tutor_contact.value = pet.tutor_contact || "";
+  populateBreedOptions(pet.breed || "");
+  DOM.petForm.elements.tutor_contact.value = formatPhoneBrazil(pet.tutor_contact || "");
   DOM.petForm.elements.registration_date.value = pet.registration_date || todayKey();
   DOM.petForm.elements.clubinho_enabled.checked = Boolean(pet.clubinho_enabled);
   DOM.petForm.elements.clubinho_plan.value = pet.clubinho_plan || "mensal";
@@ -1490,7 +1626,7 @@ async function handlePetSubmit(event) {
   const payload = {
     name: formData.get("name").toString().trim(),
     tutor_name: formData.get("tutor_name").toString().trim(),
-    tutor_contact: blankToNull(formData.get("tutor_contact")),
+    tutor_contact: blankToNull(formatPhoneBrazil(formData.get("tutor_contact"))),
     breed: blankToNull(formData.get("breed")),
     registration_date: formData.get("registration_date").toString(),
     clubinho_enabled: formData.get("clubinho_enabled") === "on",
@@ -1732,6 +1868,9 @@ function bindEvents() {
     state.petDetailsOpen = false;
     syncDisclosureButtons();
   });
+  DOM.petTutorContact.addEventListener("input", () => {
+    DOM.petTutorContact.value = formatPhoneBrazil(DOM.petTutorContact.value);
+  });
   DOM.petClubinhoInput.addEventListener("change", syncPetClubinhoFields);
   DOM.petRegistrationDate.addEventListener("change", () => {
     if (!DOM.petClubinhoAdhesionDate.value || DOM.petClubinhoAdhesionDate.value === todayKey()) {
@@ -1870,7 +2009,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260411-2", {
+    const registration = await navigator.serviceWorker.register("./sw.js?v=20260411-3", {
       updateViaCache: "none",
     });
     await registration.update();
@@ -1881,6 +2020,7 @@ async function registerServiceWorker() {
 
 async function initialize() {
   bindEvents();
+  populateBreedOptions();
   renderServicePicker();
   resetAppointmentForm();
   DOM.agendaDateFilter.value = todayKey();
