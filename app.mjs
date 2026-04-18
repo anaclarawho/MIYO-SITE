@@ -183,6 +183,8 @@ const DOM = {
   appointmentToggleButton: document.querySelector("#appointmentToggleButton"),
   appointmentCard: document.querySelector("#appointmentCard"),
   appointmentForm: document.querySelector("#appointmentForm"),
+  appointmentPetSearch: document.querySelector("#appointmentPetSearch"),
+  appointmentPetResults: document.querySelector("#appointmentPetResults"),
   appointmentPetId: document.querySelector("#appointmentPetId"),
   appointmentPetPreview: document.querySelector("#appointmentPetPreview"),
   appointmentDate: document.querySelector("#appointmentDate"),
@@ -193,6 +195,7 @@ const DOM = {
   appointmentClubinhoInput: document.querySelector("#appointmentClubinhoInput"),
   appointmentClubinhoFields: document.querySelector("#appointmentClubinhoFields"),
   appointmentClubinhoSlot: document.querySelector("#appointmentClubinhoSlot"),
+  appointmentClubinhoSlotInput: document.querySelector("#appointmentClubinhoSlotInput"),
   appointmentClubinhoAmountHint: document.querySelector("#appointmentClubinhoAmountHint"),
   agendaDateFilter: document.querySelector("#agendaDateFilter"),
   agendaSearchInput: document.querySelector("#agendaSearchInput"),
@@ -218,11 +221,20 @@ const DOM = {
   petRegistrationDate: document.querySelector("#petRegistrationDate"),
   petContactList: document.querySelector("#petContactList"),
   petAddContactButton: document.querySelector("#petAddContactButton"),
+  petSiblingToggle: document.querySelector("#petSiblingToggle"),
+  petSiblingCard: document.querySelector("#petSiblingCard"),
+  petSiblingName: document.querySelector("#petSiblingName"),
+  petSiblingBreedSelect: document.querySelector("#petSiblingBreedSelect"),
   petClubinhoInput: document.querySelector("#petClubinhoInput"),
   petClubinhoFields: document.querySelector("#petClubinhoFields"),
   petClubinhoPlan: document.querySelector("#petClubinhoPlan"),
   petClubinhoPrice: document.querySelector("#petClubinhoPrice"),
   petClubinhoAdhesionDate: document.querySelector("#petClubinhoAdhesionDate"),
+  petSiblingClubinhoInput: document.querySelector("#petSiblingClubinhoInput"),
+  petSiblingClubinhoFields: document.querySelector("#petSiblingClubinhoFields"),
+  petSiblingClubinhoPlan: document.querySelector("#petSiblingClubinhoPlan"),
+  petSiblingClubinhoPrice: document.querySelector("#petSiblingClubinhoPrice"),
+  petSiblingClubinhoAdhesionDate: document.querySelector("#petSiblingClubinhoAdhesionDate"),
   petsSearchInput: document.querySelector("#petsSearchInput"),
   clubinhoSearchInput: document.querySelector("#clubinhoSearchInput"),
   cloudConfigForm: document.querySelector("#cloudConfigForm"),
@@ -381,6 +393,14 @@ function sortedPetsByName(items) {
   });
 }
 
+function familyPets(petOrId) {
+  const pet = typeof petOrId === "string" ? getPet(petOrId) : petOrId;
+  if (!pet?.family_id) return [];
+  return sortedPetsByName(
+    state.data.pets.filter((item) => item.family_id === pet.family_id && item.id !== pet.id),
+  );
+}
+
 function parseMoneyInput(value) {
   const raw = String(value ?? "").replace(/[^\d,.-]/g, "").trim();
   if (!raw) return null;
@@ -423,6 +443,9 @@ function humanizeErrorMessage(error, fallback = "Não foi possível concluir ess
   }
   if (normalized.includes("schema cache")) {
     return "O banco do Supabase ainda não está com todos os campos novos do MIYO. Precisamos atualizar o banco.";
+  }
+  if (normalized.includes("family_id")) {
+    return "O banco do Supabase ainda não recebeu o campo novo da ficha compartilhada. Atualize o schema e tente de novo.";
   }
   if (normalized.includes("failed to fetch") || normalized.includes("networkerror")) {
     return "Não consegui falar com a nuvem agora. Confira sua internet e tente de novo.";
@@ -742,6 +765,7 @@ function normalizeDb(raw) {
     const tutor = tutorMap[pet.tutor_id] || {};
     return {
       ...pet,
+      family_id: pet.family_id || null,
       tutor_name: pet.tutor_name || tutor.name || "",
       tutor_contact: serializeTutorContacts(parseTutorContacts(pet.tutor_contact || tutor.phone || tutor.email || "")),
       registration_date: pet.registration_date || localDateKeyFromValue(pet.created_at || new Date().toISOString()),
@@ -1158,14 +1182,20 @@ function renderServicePicker(selectedItems = []) {
   DOM.serviceSelectInput.value = "";
 }
 
-function populateBreedOptions(selectedValue = "") {
+function populateBreedSelect(selectElement, selectedValue = "") {
+  if (!selectElement) return;
   const customBreed = selectedValue && !BREED_OPTIONS.includes(selectedValue) ? [selectedValue] : [];
   const options = [...customBreed, ...BREED_OPTIONS];
-  DOM.petBreedSelect.innerHTML = `
+  selectElement.innerHTML = `
     <option value="">Selecione a raça</option>
     ${options.map((breed) => `<option value="${escapeHtml(breed)}">${escapeHtml(breed)}</option>`).join("")}
   `;
-  DOM.petBreedSelect.value = selectedValue || "";
+  selectElement.value = selectedValue || "";
+}
+
+function populateBreedOptions(selectedValue = "", siblingSelectedValue = "") {
+  populateBreedSelect(DOM.petBreedSelect, selectedValue);
+  populateBreedSelect(DOM.petSiblingBreedSelect, siblingSelectedValue);
 }
 
 function selectedServiceItems() {
@@ -1181,6 +1211,63 @@ function removeServiceItem(service) {
   renderServicePicker(state.selectedServiceItems.filter((item) => item !== service));
 }
 
+function appointmentPetLabel(pet) {
+  return `${pet.name}${pet.tutor_name ? ` • ${pet.tutor_name}` : ""}`;
+}
+
+function resolveAppointmentPetFromQuery(value) {
+  const query = normalizeSearch(value);
+  if (!query) return null;
+
+  const exactLabelMatch = state.data.pets.find((pet) => normalizeSearch(appointmentPetLabel(pet)) === query);
+  if (exactLabelMatch) return exactLabelMatch;
+
+  const nameMatches = state.data.pets.filter((pet) => normalizeSearch(pet.name) === query);
+  if (nameMatches.length === 1) return nameMatches[0];
+
+  return null;
+}
+
+function matchingAppointmentPets(value) {
+  const query = normalizeSearch(value);
+  if (!query) return [];
+
+  return sortedPetsByName(state.data.pets)
+    .filter((pet) => includesSearch([pet.name, pet.tutor_name, pet.breed].join(" "), query))
+    .slice(0, 8);
+}
+
+function hideAppointmentPetResults() {
+  DOM.appointmentPetResults.hidden = true;
+  DOM.appointmentPetResults.innerHTML = "";
+}
+
+function renderAppointmentPetResults(query = DOM.appointmentPetSearch.value) {
+  const pets = matchingAppointmentPets(query);
+  if (!pets.length) {
+    hideAppointmentPetResults();
+    return;
+  }
+
+  DOM.appointmentPetResults.innerHTML = pets
+    .map((pet) => `
+      <button class="search-combobox-item" data-appointment-pet="${pet.id}" type="button">
+        <strong>${escapeHtml(pet.name)}</strong>
+        <span>${escapeHtml(pet.tutor_name || "Tutor não informado")}</span>
+      </button>
+    `)
+    .join("");
+  DOM.appointmentPetResults.hidden = false;
+}
+
+function selectAppointmentPet(pet) {
+  if (!pet) return;
+  DOM.appointmentPetId.value = pet.id;
+  DOM.appointmentPetSearch.value = appointmentPetLabel(pet);
+  hideAppointmentPetResults();
+  syncAppointmentClubinhoUI();
+}
+
 function renderAppointmentPetPreview() {
   const pet = getPet(DOM.appointmentPetId.value);
   DOM.appointmentPetPreview.innerHTML = pet
@@ -1188,33 +1275,95 @@ function renderAppointmentPetPreview() {
     : "Selecione um pet para ver o tutor.";
 }
 
-function populateClubinhoSlotOptions(pet) {
-  const plan = clubinhoPlanConfig(pet?.clubinho_plan);
-  DOM.appointmentClubinhoSlot.innerHTML = Array.from({ length: plan.bathSlots }, (_item, index) => {
-    const order = index + 1;
-    return `<option value="${order}º banho do ciclo">${order}º banho do ciclo</option>`;
-  }).join("");
-  const summary = clubinhoProgress(pet);
-  const suggestedSlot = Math.min(summary.bathDone + 1, plan.bathSlots);
-  DOM.appointmentClubinhoSlot.value = `${suggestedSlot}º banho do ciclo`;
+function syncAppointmentPetSelection({ commit = false } = {}) {
+  const pet = resolveAppointmentPetFromQuery(DOM.appointmentPetSearch.value.trim());
+  if (pet && commit) {
+    selectAppointmentPet(pet);
+    return pet;
+  }
+
+  DOM.appointmentPetId.value = "";
+  renderAppointmentPetResults();
+  syncAppointmentClubinhoUI();
+  return pet;
 }
 
-function syncPetClubinhoFields() {
-  const enabled = DOM.petClubinhoInput.checked;
-  DOM.petClubinhoFields.hidden = !enabled;
+function populateClubinhoSlotOptions(pet) {
+  const plan = clubinhoPlanConfig(pet?.clubinho_plan);
+  const summary = clubinhoProgress(pet);
+  const suggestedSlot = Math.min(summary.bathDone + 1, plan.bathSlots);
+  DOM.appointmentClubinhoSlot.innerHTML = Array.from({ length: plan.bathSlots }, (_item, index) => {
+    const order = index + 1;
+    const value = `${order}º banho do ciclo`;
+    const isActive = order === suggestedSlot;
+    return `<button class="slot-chip ${isActive ? "is-active" : ""}" data-slot-value="${escapeHtml(value)}" type="button">${escapeHtml(value)}</button>`;
+  }).join("");
+  DOM.appointmentClubinhoSlotInput.value = `${suggestedSlot}º banho do ciclo`;
+}
+
+function syncClubinhoFields({
+  enabledInput,
+  fieldsWrap,
+  planInput,
+  priceInput,
+  adhesionInput,
+  registrationValue,
+}) {
+  const enabled = enabledInput.checked;
+  fieldsWrap.hidden = !enabled;
   if (!enabled) {
-    DOM.petClubinhoPlan.value = "mensal";
-    DOM.petClubinhoPrice.value = "";
-    DOM.petClubinhoAdhesionDate.value = "";
+    planInput.value = "mensal";
+    priceInput.value = "";
+    adhesionInput.value = "";
     return;
   }
 
-  if (!DOM.petClubinhoPlan.value) {
-    DOM.petClubinhoPlan.value = "mensal";
+  if (!planInput.value) {
+    planInput.value = "mensal";
   }
-  if (!DOM.petClubinhoAdhesionDate.value) {
-    DOM.petClubinhoAdhesionDate.value = DOM.petRegistrationDate.value || todayKey();
+  if (!adhesionInput.value) {
+    adhesionInput.value = registrationValue || todayKey();
   }
+}
+
+function syncPetClubinhoFields() {
+  syncClubinhoFields({
+    enabledInput: DOM.petClubinhoInput,
+    fieldsWrap: DOM.petClubinhoFields,
+    planInput: DOM.petClubinhoPlan,
+    priceInput: DOM.petClubinhoPrice,
+    adhesionInput: DOM.petClubinhoAdhesionDate,
+    registrationValue: DOM.petRegistrationDate.value,
+  });
+}
+
+function syncSiblingClubinhoFields() {
+  syncClubinhoFields({
+    enabledInput: DOM.petSiblingClubinhoInput,
+    fieldsWrap: DOM.petSiblingClubinhoFields,
+    planInput: DOM.petSiblingClubinhoPlan,
+    priceInput: DOM.petSiblingClubinhoPrice,
+    adhesionInput: DOM.petSiblingClubinhoAdhesionDate,
+    registrationValue: DOM.petRegistrationDate.value,
+  });
+}
+
+function syncSiblingPetFields() {
+  const enabled = Boolean(DOM.petSiblingToggle.checked && !state.editingPetId);
+  DOM.petSiblingCard.hidden = !enabled;
+  DOM.petSiblingName.required = enabled;
+  if (!enabled) {
+    DOM.petSiblingName.value = "";
+    populateBreedSelect(DOM.petSiblingBreedSelect, "");
+    DOM.petSiblingClubinhoInput.checked = false;
+    syncSiblingClubinhoFields();
+    DOM.petForm.elements.sibling_notes.value = "";
+    return;
+  }
+  if (!DOM.petSiblingClubinhoAdhesionDate.value) {
+    DOM.petSiblingClubinhoAdhesionDate.value = DOM.petRegistrationDate.value || todayKey();
+  }
+  syncSiblingClubinhoFields();
 }
 
 function syncAppointmentClubinhoUI() {
@@ -1229,6 +1378,7 @@ function syncAppointmentClubinhoUI() {
     DOM.appointmentClubinhoFields.hidden = true;
     DOM.appointmentAmountField.hidden = false;
     DOM.appointmentClubinhoSlot.innerHTML = "";
+    DOM.appointmentClubinhoSlotInput.value = "";
     return;
   }
 
@@ -1244,18 +1394,17 @@ function syncAppointmentClubinhoUI() {
 
 function refreshPetSelect() {
   const sortedPets = sortedPetsByName(state.data.pets);
-  const preferredId = DOM.appointmentPetId.value || state.selectedPetId || sortedPets[0]?.id || "";
-  const options = sortedPets.map((pet) => {
-    const tutor = pet.tutor_name ? ` • ${pet.tutor_name}` : "";
-    return `<option value="${escapeHtml(pet.id)}">${escapeHtml(pet.name)}${escapeHtml(tutor)}</option>`;
-  });
-  DOM.appointmentPetId.innerHTML = options.length ? options.join("") : `<option value="">Cadastre um pet primeiro</option>`;
-  DOM.appointmentPetId.disabled = !options.length;
-  if (options.length) {
-    DOM.appointmentPetId.value = sortedPets.some((pet) => pet.id === preferredId)
-      ? preferredId
-      : sortedPets[0].id;
+  const preferredId = DOM.appointmentPetId.value || "";
+  DOM.appointmentPetSearch.disabled = !sortedPets.length;
+  const activePet = sortedPets.find((pet) => pet.id === preferredId) || null;
+  if (activePet) {
+    DOM.appointmentPetId.value = activePet.id;
+    DOM.appointmentPetSearch.value = appointmentPetLabel(activePet);
+  } else {
+    DOM.appointmentPetId.value = "";
+    DOM.appointmentPetSearch.value = "";
   }
+  hideAppointmentPetResults();
   syncAppointmentClubinhoUI();
 }
 
@@ -1387,16 +1536,22 @@ function resetPetForm() {
   state.editingPetId = null;
   DOM.petForm.reset();
   DOM.petRegistrationDate.value = todayKey();
-  populateBreedOptions();
+  populateBreedOptions("", "");
   renderPetContactInputs([""]);
+  DOM.petSiblingToggle.checked = false;
+  DOM.petSiblingToggle.disabled = false;
   DOM.petClubinhoPlan.value = "mensal";
   DOM.petClubinhoPrice.value = "";
   DOM.petClubinhoAdhesionDate.value = todayKey();
+  DOM.petSiblingClubinhoPlan.value = "mensal";
+  DOM.petSiblingClubinhoPrice.value = "";
+  DOM.petSiblingClubinhoAdhesionDate.value = todayKey();
   DOM.petFormTitle.textContent = "Novo pet";
   DOM.petFormSubmitButton.textContent = "Salvar pet";
   DOM.petFormCancelButton.hidden = true;
   state.petFormOpen = false;
   syncPetClubinhoFields();
+  syncSiblingPetFields();
   syncDisclosureButtons();
 }
 
@@ -1407,7 +1562,7 @@ function startPetEdit(petId) {
   state.petFormOpen = true;
   DOM.petForm.elements.name.value = pet.name || "";
   DOM.petForm.elements.tutor_name.value = pet.tutor_name || "";
-  populateBreedOptions(pet.breed || "");
+  populateBreedOptions(pet.breed || "", "");
   renderPetContactInputs(parseTutorContacts(pet.tutor_contact));
   DOM.petForm.elements.registration_date.value = pet.registration_date || todayKey();
   DOM.petForm.elements.clubinho_enabled.checked = Boolean(pet.clubinho_enabled);
@@ -1415,10 +1570,13 @@ function startPetEdit(petId) {
   DOM.petForm.elements.clubinho_price.value = formatMoneyInputValue(pet.clubinho_price);
   DOM.petForm.elements.clubinho_adhesion_date.value = pet.clubinho_adhesion_date || pet.registration_date || todayKey();
   DOM.petForm.elements.notes.value = pet.notes || "";
+  DOM.petSiblingToggle.checked = false;
+  DOM.petSiblingToggle.disabled = true;
   DOM.petFormTitle.textContent = `Editando ${pet.name}`;
   DOM.petFormSubmitButton.textContent = "Salvar alterações";
   DOM.petFormCancelButton.hidden = false;
   syncPetClubinhoFields();
+  syncSiblingPetFields();
   syncDisclosureButtons();
   openSection("pets");
   DOM.petFormCard?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1559,6 +1717,7 @@ function renderPetDetails() {
   const history = appointmentsForPet(pet.id);
   const clubinhoText = pet.clubinho_enabled ? clubinhoHeadline(pet.id) : "Não participa do clubinho";
   const plan = clubinhoPlanConfig(pet.clubinho_plan);
+  const siblings = familyPets(pet);
 
   DOM.petDetailsPanel.innerHTML = `
     <div class="pet-profile-card">
@@ -1574,6 +1733,15 @@ function renderPetDetails() {
         <button class="action-chip" data-edit-pet="${pet.id}">Editar ficha</button>
         ${pet.clubinho_enabled ? `<button class="action-chip" data-renew-clubinho="${pet.id}">Renovar clubinho</button>` : ""}
       </div>
+      ${siblings.length ? `
+        <div class="linked-pets-panel">
+          <span class="mini-label">Pets nesta ficha</span>
+          <div class="linked-pets-row">
+            <span class="tag success">${escapeHtml(pet.name)} • atual</span>
+            ${siblings.map((item) => `<button class="action-chip" data-open-pet="${item.id}">${escapeHtml(item.name)} • ${escapeHtml(item.breed || "Sem raça")}</button>`).join("")}
+          </div>
+        </div>
+      ` : ""}
       <div class="pet-profile-grid">
         <div>
           <span class="mini-label">Tutor</span>
@@ -1734,6 +1902,9 @@ function resetAppointmentForm() {
   DOM.appointmentForm.reset();
   DOM.appointmentDate.value = todayKey();
   DOM.appointmentTime.value = "09:00";
+  DOM.appointmentPetId.value = "";
+  DOM.appointmentPetSearch.value = "";
+  hideAppointmentPetResults();
   if (DOM.appointmentAmountInput) {
     DOM.appointmentAmountInput.value = "";
   }
@@ -1746,19 +1917,43 @@ function resetAppointmentForm() {
 async function handlePetSubmit(event) {
   event.preventDefault();
   const formData = new FormData(event.currentTarget);
-  const payload = {
-    name: formData.get("name").toString().trim(),
+  const hasSibling = Boolean(formData.get("has_sibling") === "on" && !state.editingPetId);
+  const currentPet = state.editingPetId ? getPet(state.editingPetId) : null;
+  const sharedFields = {
     tutor_name: formData.get("tutor_name").toString().trim(),
     tutor_contact: serializeTutorContacts(currentPetContactValues()),
-    breed: blankToNull(formData.get("breed")),
     registration_date: formData.get("registration_date").toString(),
-    clubinho_enabled: formData.get("clubinho_enabled") === "on",
-    clubinho_plan: formData.get("clubinho_enabled") === "on" ? formData.get("clubinho_plan").toString() : null,
-    clubinho_price: formData.get("clubinho_enabled") === "on" ? parseMoneyInput(formData.get("clubinho_price")) : null,
-    clubinho_adhesion_date:
-      formData.get("clubinho_enabled") === "on" ? formData.get("clubinho_adhesion_date").toString() : null,
-    notes: blankToNull(formData.get("notes")),
+    family_id: currentPet?.family_id || (hasSibling ? uid() : null),
   };
+
+  const buildPetPayload = ({
+    name,
+    breed,
+    clubinhoEnabled,
+    clubinhoPlan,
+    clubinhoPrice,
+    clubinhoAdhesionDate,
+    notes,
+  }) => ({
+    ...sharedFields,
+    name: String(name ?? "").trim(),
+    breed: blankToNull(breed),
+    clubinho_enabled: clubinhoEnabled,
+    clubinho_plan: clubinhoEnabled ? String(clubinhoPlan ?? "mensal") : null,
+    clubinho_price: clubinhoEnabled ? parseMoneyInput(clubinhoPrice) : null,
+    clubinho_adhesion_date: clubinhoEnabled ? String(clubinhoAdhesionDate ?? "") : null,
+    notes: blankToNull(notes),
+  });
+
+  const payload = buildPetPayload({
+    name: formData.get("name"),
+    breed: formData.get("breed"),
+    clubinhoEnabled: formData.get("clubinho_enabled") === "on",
+    clubinhoPlan: formData.get("clubinho_plan"),
+    clubinhoPrice: formData.get("clubinho_price"),
+    clubinhoAdhesionDate: formData.get("clubinho_adhesion_date"),
+    notes: formData.get("notes"),
+  });
 
   if (payload.clubinho_enabled && !payload.clubinho_price) {
     notify("Preencha o valor do pacote para o pet do Clubinho MIYO.", "warning");
@@ -1766,6 +1961,31 @@ async function handlePetSubmit(event) {
   }
   if (payload.clubinho_enabled && !payload.clubinho_adhesion_date) {
     payload.clubinho_adhesion_date = payload.registration_date || todayKey();
+  }
+
+  let siblingPayload = null;
+  if (hasSibling) {
+    siblingPayload = buildPetPayload({
+      name: formData.get("sibling_name"),
+      breed: formData.get("sibling_breed"),
+      clubinhoEnabled: formData.get("sibling_clubinho_enabled") === "on",
+      clubinhoPlan: formData.get("sibling_clubinho_plan"),
+      clubinhoPrice: formData.get("sibling_clubinho_price"),
+      clubinhoAdhesionDate: formData.get("sibling_clubinho_adhesion_date"),
+      notes: formData.get("sibling_notes"),
+    });
+
+    if (!siblingPayload.name) {
+      notify("Preencha o nome do segundo pet para salvar a ficha conjunta.", "warning");
+      return;
+    }
+    if (siblingPayload.clubinho_enabled && !siblingPayload.clubinho_price) {
+      notify("Preencha o valor do pacote do segundo pet do Clubinho MIYO.", "warning");
+      return;
+    }
+    if (siblingPayload.clubinho_enabled && !siblingPayload.clubinho_adhesion_date) {
+      siblingPayload.clubinho_adhesion_date = siblingPayload.registration_date || todayKey();
+    }
   }
 
   if (state.editingPetId) {
@@ -1781,17 +2001,32 @@ async function handlePetSubmit(event) {
 
   const saved = await upsertEntity("pets", payload);
   if (!saved) return;
+  let savedSibling = null;
+  if (siblingPayload) {
+    savedSibling = await upsertEntity("pets", siblingPayload);
+    if (!savedSibling) {
+      state.selectedPetId = saved.id;
+      state.petDetailsOpen = true;
+      resetPetForm();
+      renderAll();
+      notify("O primeiro pet foi salvo, mas não consegui salvar o segundo.", "warning");
+      return;
+    }
+  }
   state.selectedPetId = saved.id;
   state.petDetailsOpen = true;
   resetPetForm();
   renderAll();
-  notify("Pet salvo com sucesso.", "success");
+  notify(savedSibling ? "Ficha salva com os dois pets." : "Pet salvo com sucesso.", "success");
 }
 
 async function handleAppointmentSubmit(event) {
   event.preventDefault();
   const formData = new FormData(event.currentTarget);
-  const pet = getPet(formData.get("pet_id").toString());
+  if (!formData.get("pet_id")) {
+    syncAppointmentPetSelection({ commit: true });
+  }
+  const pet = getPet(DOM.appointmentPetId.value || formData.get("pet_id").toString());
   const services = selectedServiceItems();
   const isClubinho = Boolean(pet?.clubinho_enabled && formData.get("is_clubinho") === "on");
 
@@ -2001,18 +2236,36 @@ function bindEvents() {
     const inputs = DOM.petContactList.querySelectorAll('input[name="tutor_contact_item"]');
     inputs[inputs.length - 1]?.focus();
   });
-  [DOM.petClubinhoPrice, DOM.appointmentAmountInput].filter(Boolean).forEach((input) => {
+  [DOM.petClubinhoPrice, DOM.petSiblingClubinhoPrice, DOM.appointmentAmountInput].filter(Boolean).forEach((input) => {
     input.addEventListener("blur", () => {
       input.value = formatMoneyInputValue(input.value);
     });
   });
+  DOM.petSiblingToggle.addEventListener("change", syncSiblingPetFields);
   DOM.petClubinhoInput.addEventListener("change", syncPetClubinhoFields);
+  DOM.petSiblingClubinhoInput.addEventListener("change", syncSiblingClubinhoFields);
   DOM.petRegistrationDate.addEventListener("change", () => {
     if (!DOM.petClubinhoAdhesionDate.value || DOM.petClubinhoAdhesionDate.value === todayKey()) {
       DOM.petClubinhoAdhesionDate.value = DOM.petRegistrationDate.value || todayKey();
     }
+    if (!DOM.petSiblingClubinhoAdhesionDate.value || DOM.petSiblingClubinhoAdhesionDate.value === todayKey()) {
+      DOM.petSiblingClubinhoAdhesionDate.value = DOM.petRegistrationDate.value || todayKey();
+    }
   });
-  DOM.appointmentPetId.addEventListener("change", syncAppointmentClubinhoUI);
+  DOM.appointmentPetSearch.addEventListener("input", () => syncAppointmentPetSelection());
+  DOM.appointmentPetSearch.addEventListener("change", () => syncAppointmentPetSelection({ commit: true }));
+  DOM.appointmentPetSearch.addEventListener("focus", () => {
+    if (DOM.appointmentPetSearch.value.trim()) {
+      renderAppointmentPetResults();
+    }
+  });
+  DOM.appointmentPetSearch.addEventListener("blur", () => {
+    window.setTimeout(() => {
+      if (!DOM.appointmentPetResults.matches(":hover")) {
+        hideAppointmentPetResults();
+      }
+    }, 120);
+  });
   DOM.appointmentClubinhoInput.addEventListener("change", () => {
     const pet = getPet(DOM.appointmentPetId.value);
     const enabled = Boolean(pet?.clubinho_enabled && DOM.appointmentClubinhoInput.checked);
@@ -2053,6 +2306,17 @@ function bindEvents() {
   DOM.installButton.addEventListener("click", handleInstallClick);
 
   document.addEventListener("click", async (event) => {
+    const appointmentPetButton = event.target.closest("[data-appointment-pet]");
+    if (appointmentPetButton) {
+      const pet = getPet(appointmentPetButton.dataset.appointmentPet);
+      selectAppointmentPet(pet);
+      return;
+    }
+
+    if (!event.target.closest(".search-combobox")) {
+      hideAppointmentPetResults();
+    }
+
     const editPetButton = event.target.closest("[data-edit-pet]");
     if (editPetButton) {
       startPetEdit(editPetButton.dataset.editPet);
@@ -2062,6 +2326,15 @@ function bindEvents() {
     const removeServiceButton = event.target.closest("[data-remove-service]");
     if (removeServiceButton) {
       removeServiceItem(removeServiceButton.dataset.removeService);
+      return;
+    }
+
+    const slotButton = event.target.closest("[data-slot-value]");
+    if (slotButton) {
+      DOM.appointmentClubinhoSlotInput.value = slotButton.dataset.slotValue;
+      DOM.appointmentClubinhoSlot.querySelectorAll(".slot-chip").forEach((item) =>
+        item.classList.toggle("is-active", item === slotButton)
+      );
       return;
     }
 
@@ -2152,7 +2425,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260411-6", {
+    const registration = await navigator.serviceWorker.register("./sw.js?v=20260418-2", {
       updateViaCache: "none",
     });
     await registration.update();

@@ -27,6 +27,7 @@ create table if not exists public.pets (
   name text not null,
   breed text,
   size text,
+  family_id text,
   tutor_name text,
   tutor_contact text,
   registration_date date default current_date,
@@ -83,6 +84,7 @@ alter table public.pets add column if not exists tutor_name text;
 alter table public.pets add column if not exists tutor_contact text;
 alter table public.pets add column if not exists registration_date date default current_date;
 alter table public.pets add column if not exists clubinho_enabled boolean not null default false;
+alter table public.pets add column if not exists family_id text;
 alter table public.pets add column if not exists clubinho_plan text;
 alter table public.pets add column if not exists clubinho_price numeric(10, 2);
 alter table public.pets add column if not exists clubinho_adhesion_date date;
@@ -94,6 +96,7 @@ alter table public.pets drop constraint if exists pets_clubinho_plan_check;
 alter table public.pets add constraint pets_clubinho_plan_check check (clubinho_plan in ('mensal', 'quinzenal'));
 create index if not exists pets_user_idx on public.pets(user_id);
 create index if not exists pets_tutor_idx on public.pets(tutor_id);
+create index if not exists pets_family_idx on public.pets(family_id);
 create index if not exists packages_user_idx on public.packages(user_id);
 create index if not exists packages_pet_idx on public.packages(pet_id);
 create index if not exists package_sessions_user_idx on public.package_sessions(user_id);

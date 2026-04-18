@@ -9,17 +9,17 @@
     >
     <meta name="theme-color" content="#1f5a52">
     <title>MIYO</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260411-6">
-    <link rel="icon" href="./assets/brand/logo-secundaria-turquesa.png?v=20260411-6" type="image/png">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260418-2">
+    <link rel="icon" href="./assets/brand/logo-secundaria-turquesa.png?v=20260418-2" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     >
-    <link rel="stylesheet" href="./styles.css?v=20260411-6">
-    <script defer src="./config.js?v=20260411-6"></script>
-    <script type="module" defer src="./app.mjs?v=20260411-6"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260418-2">
+    <script defer src="./config.js?v=20260418-2"></script>
+    <script type="module" defer src="./app.mjs?v=20260418-2"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -144,7 +144,11 @@
                   <div class="form-subgrid">
                     <label class="full-width">
                       Pet
-                      <select name="pet_id" id="appointmentPetId" required></select>
+                      <div class="search-combobox">
+                        <input type="search" id="appointmentPetSearch" autocomplete="off" placeholder="Digite o nome do pet ou do tutor">
+                        <div class="search-combobox-results" id="appointmentPetResults" hidden></div>
+                      </div>
+                      <input type="hidden" name="pet_id" id="appointmentPetId">
                       <span class="field-hint" id="appointmentPetPreview">Selecione um pet para ver o tutor.</span>
                     </label>
                     <label>
@@ -187,10 +191,11 @@
                       </span>
                     </label>
                     <div class="clubinho-config full-width" id="appointmentClubinhoFields" hidden>
-                      <label>
-                        Banho do ciclo
-                        <select name="clubinho_slot" id="appointmentClubinhoSlot"></select>
-                      </label>
+                      <div class="slot-picker-block">
+                        <span class="mini-label slot-picker-label">Banho do ciclo</span>
+                        <div class="slot-picker" id="appointmentClubinhoSlot"></div>
+                        <input type="hidden" name="clubinho_slot" id="appointmentClubinhoSlotInput">
+                      </div>
                       <div class="helper-block clubinho-amount-card">
                         <span class="mini-label">Cobrança automática</span>
                         <span class="muted" id="appointmentClubinhoAmountHint">O valor do pacote será usado.</span>
@@ -245,18 +250,8 @@
               <h3 id="petFormTitle">Novo pet</h3>
               <form class="grid-form" id="petForm">
                 <label>
-                  Nome do pet
-                  <input type="text" name="name" placeholder="Ex.: Mel" required>
-                </label>
-                <label>
                   Nome do tutor
                   <input type="text" name="tutor_name" placeholder="Ex.: Fernanda Souza" required>
-                </label>
-                <label>
-                  Raça
-                  <select name="breed" id="petBreedSelect">
-                    <option value="">Selecione a raça</option>
-                  </select>
                 </label>
                 <div class="full-width contact-editor">
                   <div class="contact-editor-head">
@@ -269,46 +264,132 @@
                   Data de cadastro
                   <input type="date" name="registration_date" id="petRegistrationDate" required>
                 </label>
-                <label class="clubinho-toggle">
-                  Clubinho MIYO
+                <label class="clubinho-toggle full-width sibling-toggle">
+                  Dois pets na mesma ficha
                   <span class="clubinho-inline">
-                    <input type="checkbox" name="clubinho_enabled" id="petClubinhoInput">
+                    <input type="checkbox" name="has_sibling" id="petSiblingToggle">
                     <span class="clubinho-star" aria-hidden="true">&#9733;</span>
-                    <span>Sinalizar como Clubinho</span>
+                    <span>Cadastrar irmão com o mesmo tutor</span>
                   </span>
                 </label>
-                <div class="clubinho-config full-width" id="petClubinhoFields" hidden>
-                  <label>
-                    Tipo do clubinho
-                    <select name="clubinho_plan" id="petClubinhoPlan">
-                      <option value="mensal">Mensal • 4 banhos</option>
-                      <option value="quinzenal">Quinzenal • 2 banhos</option>
-                    </select>
-                  </label>
-                  <label>
-                    Valor do pacote
-                    <span class="money-field">
-                      <span class="currency-prefix">R$</span>
-                      <input
-                        type="text"
-                        name="clubinho_price"
-                        id="petClubinhoPrice"
-                        class="currency-input"
-                        inputmode="decimal"
-                        autocomplete="off"
-                        placeholder="0,00"
-                      >
-                    </span>
-                  </label>
-                  <label>
-                    Adesão do clubinho
-                    <input type="date" name="clubinho_adhesion_date" id="petClubinhoAdhesionDate">
-                  </label>
+
+                <div class="pet-entry-card full-width">
+                  <div class="pet-entry-head">
+                    <h4>Pet 1</h4>
+                    <span class="mini-label">Agenda e histórico separados</span>
+                  </div>
+                  <div class="pet-entry-grid">
+                    <label>
+                      Nome do pet
+                      <input type="text" name="name" placeholder="Ex.: Mel" required>
+                    </label>
+                    <label>
+                      Raça
+                      <select name="breed" id="petBreedSelect">
+                        <option value="">Selecione a raça</option>
+                      </select>
+                    </label>
+                    <label class="clubinho-toggle">
+                      Clubinho MIYO
+                      <span class="clubinho-inline">
+                        <input type="checkbox" name="clubinho_enabled" id="petClubinhoInput">
+                        <span class="clubinho-star" aria-hidden="true">&#9733;</span>
+                        <span>Sinalizar como Clubinho</span>
+                      </span>
+                    </label>
+                    <div class="clubinho-config full-width" id="petClubinhoFields" hidden>
+                      <label>
+                        Tipo do clubinho
+                        <select name="clubinho_plan" id="petClubinhoPlan">
+                          <option value="mensal">Mensal • 4 banhos</option>
+                          <option value="quinzenal">Quinzenal • 2 banhos</option>
+                        </select>
+                      </label>
+                      <label>
+                        Valor do pacote
+                        <span class="money-field">
+                          <span class="currency-prefix">R$</span>
+                          <input
+                            type="text"
+                            name="clubinho_price"
+                            id="petClubinhoPrice"
+                            class="currency-input"
+                            inputmode="decimal"
+                            autocomplete="off"
+                            placeholder="0,00"
+                          >
+                        </span>
+                      </label>
+                      <label>
+                        Adesão do clubinho
+                        <input type="date" name="clubinho_adhesion_date" id="petClubinhoAdhesionDate">
+                      </label>
+                    </div>
+                    <label class="full-width">
+                      Observações do pet
+                      <textarea name="notes" rows="3" placeholder="Se precisar, deixe observações do pet."></textarea>
+                    </label>
+                  </div>
                 </div>
-                <label class="full-width">
-                  Observações
-                  <textarea name="notes" rows="3" placeholder="Se precisar, deixe observações do pet."></textarea>
-                </label>
+
+                <div class="pet-entry-card full-width" id="petSiblingCard" hidden>
+                  <div class="pet-entry-head">
+                    <h4>Pet 2</h4>
+                    <span class="mini-label">Mesmo tutor, agenda separada</span>
+                  </div>
+                  <div class="pet-entry-grid">
+                    <label>
+                      Nome do pet
+                      <input type="text" name="sibling_name" id="petSiblingName" placeholder="Ex.: Nino">
+                    </label>
+                    <label>
+                      Raça
+                      <select name="sibling_breed" id="petSiblingBreedSelect">
+                        <option value="">Selecione a raça</option>
+                      </select>
+                    </label>
+                    <label class="clubinho-toggle">
+                      Clubinho MIYO
+                      <span class="clubinho-inline">
+                        <input type="checkbox" name="sibling_clubinho_enabled" id="petSiblingClubinhoInput">
+                        <span class="clubinho-star" aria-hidden="true">&#9733;</span>
+                        <span>Sinalizar como Clubinho</span>
+                      </span>
+                    </label>
+                    <div class="clubinho-config full-width" id="petSiblingClubinhoFields" hidden>
+                      <label>
+                        Tipo do clubinho
+                        <select name="sibling_clubinho_plan" id="petSiblingClubinhoPlan">
+                          <option value="mensal">Mensal • 4 banhos</option>
+                          <option value="quinzenal">Quinzenal • 2 banhos</option>
+                        </select>
+                      </label>
+                      <label>
+                        Valor do pacote
+                        <span class="money-field">
+                          <span class="currency-prefix">R$</span>
+                          <input
+                            type="text"
+                            name="sibling_clubinho_price"
+                            id="petSiblingClubinhoPrice"
+                            class="currency-input"
+                            inputmode="decimal"
+                            autocomplete="off"
+                            placeholder="0,00"
+                          >
+                        </span>
+                      </label>
+                      <label>
+                        Adesão do clubinho
+                        <input type="date" name="sibling_clubinho_adhesion_date" id="petSiblingClubinhoAdhesionDate">
+                      </label>
+                    </div>
+                    <label class="full-width">
+                      Observações do pet
+                      <textarea name="sibling_notes" rows="3" placeholder="Se precisar, deixe observações do segundo pet."></textarea>
+                    </label>
+                  </div>
+                </div>
                 <div class="button-row full-width">
                   <button class="primary-button" id="petFormSubmitButton" type="submit">Salvar pet</button>
                   <button class="secondary-button" id="petFormCancelButton" type="button" hidden>Cancelar edição</button>

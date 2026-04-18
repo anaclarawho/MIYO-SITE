@@ -507,6 +507,92 @@ button {
   padding: 14px;
   border-radius: 18px;
   background: rgba(217, 244, 246, 0.42);
+  align-items: start;
+}
+
+.slot-picker-block {
+  display: grid;
+  gap: 10px;
+}
+
+.slot-picker-label {
+  display: inline-flex;
+}
+
+.slot-picker {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.slot-chip {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(17, 173, 187, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--brand-deep);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.slot-chip.is-active {
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  color: white;
+  box-shadow: 0 14px 28px rgba(11, 123, 134, 0.2);
+}
+
+.search-combobox {
+  position: relative;
+}
+
+.search-combobox-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 18;
+  display: grid;
+  gap: 6px;
+  max-height: 260px;
+  padding: 8px;
+  overflow-y: auto;
+  border: 1px solid rgba(17, 173, 187, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 22px 44px rgba(14, 53, 57, 0.14);
+}
+
+.search-combobox-item {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(217, 244, 246, 0.34);
+  color: var(--text);
+  text-align: left;
+}
+
+.search-combobox-item strong {
+  font-size: 0.96rem;
+}
+
+.search-combobox-item span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.search-combobox-item:hover,
+.search-combobox-item:focus-visible {
+  background: rgba(17, 173, 187, 0.14);
+  outline: none;
 }
 
 .clubinho-progress-head {
@@ -659,9 +745,49 @@ textarea {
   flex: 1 1 auto;
 }
 
+.sibling-toggle {
+  margin-top: 2px;
+}
+
+.pet-entry-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(17, 173, 187, 0.14);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(248, 253, 253, 0.72));
+}
+
+.pet-entry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pet-entry-head h4 {
+  margin: 0;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.pet-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.pet-entry-grid label.full-width,
+.pet-entry-grid .full-width {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 640px) {
   .contact-editor-head,
-  .contact-row {
+  .contact-row,
+  .pet-entry-head {
     flex-direction: column;
     align-items: stretch;
   }
@@ -1223,6 +1349,20 @@ tbody tr:hover {
   background: rgba(217, 244, 246, 0.42);
 }
 
+.linked-pets-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(217, 244, 246, 0.34);
+}
+
+.linked-pets-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .history-item {
   display: grid;
   gap: 8px;
@@ -1480,6 +1620,7 @@ tbody tr:hover {
   .stats-grid,
   .stats-grid.compact,
   .grid-form,
+  .pet-entry-grid,
   .clubinho-config,
   .status-board,
   .service-picker,
@@ -1751,6 +1892,7 @@ tbody tr:hover {
   .stats-grid,
   .stats-grid.compact,
   .grid-form,
+  .pet-entry-grid,
   .clubinho-config,
   .toolbar,
   .status-board,
