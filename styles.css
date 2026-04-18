@@ -526,6 +526,7 @@ button {
   align-items: start;
   gap: 10px;
   min-height: 42px;
+  min-width: 0;
   overflow-x: auto;
   padding-bottom: 4px;
   scrollbar-width: thin;

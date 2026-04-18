@@ -1291,23 +1291,30 @@ function syncAppointmentPetSelection({ commit = false } = {}) {
 function populateClubinhoSlotOptions(pet) {
   const plan = clubinhoPlanConfig(pet?.clubinho_plan);
   const summary = clubinhoProgress(pet);
-  const suggestedSlot = Math.min(summary.bathDone + 1, plan.bathSlots);
-  DOM.appointmentClubinhoSlot.replaceChildren();
+  const slotCount = Number(plan.bathSlots) || 0;
+  const suggestedSlot = Math.min(summary.bathDone + 1, slotCount || 1);
+  DOM.appointmentClubinhoSlot.textContent = "";
 
-  Array.from({ length: plan.bathSlots }, (_item, index) => {
+  Array.from({ length: slotCount }, (_item, index) => {
     const order = index + 1;
     const value = `${order}\u00BA banho do ciclo`;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "slot-chip";
-    button.dataset.slotValue = value;
+    button.setAttribute("data-slot-value", value);
     button.textContent = value;
     if (order === suggestedSlot) {
       button.classList.add("is-active");
     }
-    DOM.appointmentClubinhoSlot.append(button);
+    DOM.appointmentClubinhoSlot.appendChild(button);
     return button;
   });
+
+  if (!DOM.appointmentClubinhoSlot.childElementCount) {
+    DOM.appointmentClubinhoSlot.innerHTML = `<span class="field-hint">Escolha um pet do clubinho para ver os banhos do ciclo.</span>`;
+    DOM.appointmentClubinhoSlotInput.value = "";
+    return;
+  }
 
   DOM.appointmentClubinhoSlotInput.value = `${suggestedSlot}\u00BA banho do ciclo`;
 }
@@ -2436,7 +2443,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260418-3", {
+    const registration = await navigator.serviceWorker.register("./sw.js?v=20260418-4", {
       updateViaCache: "none",
     });
     await registration.update();
