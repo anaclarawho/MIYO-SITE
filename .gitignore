@@ -13,3 +13,8 @@ build/
 
 meu_bot_agenda.py.txt
 requirements.txt.txt
+
+backups/*.json
+backups/latest.json
+backups/.backup-session.json
+tmp-recovery-profile/
