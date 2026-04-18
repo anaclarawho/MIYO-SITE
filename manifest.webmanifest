@@ -2,20 +2,20 @@
   "name": "MIYO",
   "short_name": "MIYO",
   "lang": "pt-BR",
-  "start_url": "./?v=20260418-8",
+  "start_url": "./?v=20260418-9",
   "display": "standalone",
   "background_color": "#f6efe6",
   "theme_color": "#1f5a52",
   "description": "Sistema de gestão para banho e tosa com agenda, cadastro de pets e histórico de atendimentos.",
   "icons": [
     {
-      "src": "./assets/brand/logo-secundaria-turquesa.png?v=20260418-8",
+      "src": "./assets/brand/logo-secundaria-turquesa.png?v=20260418-9",
       "sizes": "768x768",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./assets/brand/logo-secundaria-turquesa.png?v=20260418-8",
+      "src": "./assets/brand/logo-secundaria-turquesa.png?v=20260418-9",
       "sizes": "768x768",
       "type": "image/png",
       "purpose": "maskable"

@@ -788,6 +788,10 @@ textarea {
   grid-column: 1 / -1;
 }
 
+.pet-entry-card[hidden] {
+  display: none;
+}
+
 @media (max-width: 640px) {
   .contact-editor-head,
   .contact-row,

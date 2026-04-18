@@ -1,4 +1,5 @@
 const BOOTSTRAP = window.MIYO_CONFIG || {};
+const APP_VERSION = "20260418-9";
 const STORAGE_KEY = "miyo-local-v2";
 const CLOUD_KEY = "miyo-cloud-v1";
 const CLOUD_SNAPSHOT_KEY = "miyo-cloud-snapshot-v1";
@@ -217,6 +218,7 @@ const DOM = {
   petFormCard: document.querySelector("#petFormCard"),
   petForm: document.querySelector("#petForm"),
   petFormTitle: document.querySelector("#petFormTitle"),
+  petPrimaryHeading: document.querySelector("#petPrimaryHeading"),
   petFormSubmitButton: document.querySelector("#petFormSubmitButton"),
   petFormCancelButton: document.querySelector("#petFormCancelButton"),
   petRegistrationDate: document.querySelector("#petRegistrationDate"),
@@ -1422,7 +1424,11 @@ function syncSiblingClubinhoFields() {
 
 function syncSiblingPetFields() {
   const enabled = Boolean(DOM.petSiblingToggle.checked && !state.editingPetId);
+  if (DOM.petPrimaryHeading) {
+    DOM.petPrimaryHeading.textContent = enabled ? "Pet 1" : "Dados do pet";
+  }
   DOM.petSiblingCard.hidden = !enabled;
+  DOM.petSiblingCard.setAttribute("aria-hidden", String(!enabled));
   DOM.petSiblingName.required = enabled;
   if (!enabled) {
     DOM.petSiblingName.value = "";
@@ -2515,7 +2521,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260418-6", {
+    const registration = await navigator.serviceWorker.register(`./sw.js?v=${APP_VERSION}`, {
       updateViaCache: "none",
     });
     await registration.update();

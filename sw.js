@@ -1,15 +1,15 @@
-const CACHE_NAME = "miyo-pet-care-v23";
+const CACHE_NAME = "miyo-pet-care-v24";
 const APP_ASSETS = [
   "./",
   "./index.html",
-  "./?v=20260418-8",
-  "./styles.css?v=20260418-8",
-  "./config.js?v=20260418-8",
-  "./app.mjs?v=20260418-8",
-  "./manifest.webmanifest?v=20260418-8",
+  "./?v=20260418-9",
+  "./styles.css?v=20260418-9",
+  "./config.js?v=20260418-9",
+  "./app.mjs?v=20260418-9",
+  "./manifest.webmanifest?v=20260418-9",
   "./assets/icon.svg",
   "./assets/icon-maskable.svg",
-  "./assets/brand/logo-secundaria-turquesa.png?v=20260418-8",
+  "./assets/brand/logo-secundaria-turquesa.png?v=20260418-9",
   "./assets/brand/logo-miyo-vetor.png",
   "./assets/brand/pattern-miyo.png",
 ];
