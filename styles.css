@@ -1287,6 +1287,11 @@ tbody tr:hover {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(240, 251, 252, 0.82));
 }
 
+.clubinho-card.is-open {
+  border-color: rgba(17, 173, 187, 0.28);
+  box-shadow: 0 20px 44px rgba(11, 123, 134, 0.12);
+}
+
 .clubinho-card-head {
   display: flex;
   align-items: center;
@@ -1306,6 +1311,14 @@ tbody tr:hover {
 
 .clubinho-card-meta p {
   color: var(--muted);
+}
+
+.clubinho-inline-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .clubinho-mini-grid {

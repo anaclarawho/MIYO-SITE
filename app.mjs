@@ -1880,6 +1880,12 @@ function renderClubinhoBoard() {
           const summary = clubinhoProgress(pet.id);
           const plan = clubinhoPlanConfig(pet.clubinho_plan);
           const isOpen = state.selectedClubinhoCardId === pet.id;
+          const compactSummary = `
+            <div class="clubinho-inline-summary">
+              <span class="tag success">${escapeHtml(plan.label)}</span>
+              <span class="muted">${escapeHtml(`${summary.bathDone}/${plan.bathSlots} banhos`)}</span>
+            </div>
+          `;
           return `
             <article class="clubinho-card ${isOpen ? "is-open" : ""}">
               <div class="clubinho-card-head">
@@ -1896,25 +1902,29 @@ function renderClubinhoBoard() {
                   <button class="action-chip" data-renew-clubinho="${pet.id}">Renovar</button>
                 </div>
               </div>
-              <div class="clubinho-mini-grid">
-                <div class="clubinho-mini-stat">
-                  <span class="mini-label">Banhos</span>
-                  <strong>${summary.bathDone}/${plan.bathSlots}</strong>
+              ${isOpen ? `
+                <div class="clubinho-card-body">
+                  <div class="clubinho-mini-grid">
+                    <div class="clubinho-mini-stat">
+                      <span class="mini-label">Banhos</span>
+                      <strong>${summary.bathDone}/${plan.bathSlots}</strong>
+                    </div>
+                    <div class="clubinho-mini-stat">
+                      <span class="mini-label">Plano</span>
+                      <strong>${escapeHtml(plan.label)}</strong>
+                    </div>
+                    <div class="clubinho-mini-stat">
+                      <span class="mini-label">Pacote</span>
+                      <strong>${escapeHtml(formatMoney(pet.clubinho_price))}</strong>
+                    </div>
+                    <div class="clubinho-mini-stat">
+                      <span class="mini-label">Adesão</span>
+                      <strong>${escapeHtml(formatDate(pet.clubinho_adhesion_date))}</strong>
+                    </div>
+                  </div>
+                  ${renderClubinhoProgress(pet.id)}
                 </div>
-                <div class="clubinho-mini-stat">
-                  <span class="mini-label">Plano</span>
-                  <strong>${escapeHtml(plan.label)}</strong>
-                </div>
-                <div class="clubinho-mini-stat">
-                  <span class="mini-label">Pacote</span>
-                  <strong>${escapeHtml(formatMoney(pet.clubinho_price))}</strong>
-                </div>
-                <div class="clubinho-mini-stat">
-                  <span class="mini-label">Adesão</span>
-                  <strong>${escapeHtml(formatDate(pet.clubinho_adhesion_date))}</strong>
-                </div>
-              </div>
-              ${isOpen ? `<div class="clubinho-card-body">${renderClubinhoProgress(pet.id)}</div>` : ""}
+              ` : compactSummary}
             </article>
           `;
         })
