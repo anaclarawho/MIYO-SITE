@@ -9,17 +9,17 @@
     >
     <meta name="theme-color" content="#1f5a52">
     <title>MIYO</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260418-6">
-    <link rel="icon" href="./assets/brand/logo-secundaria-turquesa.png?v=20260418-6" type="image/png">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260418-7">
+    <link rel="icon" href="./assets/brand/logo-secundaria-turquesa.png?v=20260418-7" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     >
-    <link rel="stylesheet" href="./styles.css?v=20260418-6">
-    <script defer src="./config.js?v=20260418-6"></script>
-    <script type="module" defer src="./app.mjs?v=20260418-6"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260418-7">
+    <script defer src="./config.js?v=20260418-7"></script>
+    <script type="module" defer src="./app.mjs?v=20260418-7"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -193,8 +193,9 @@
                     <div class="clubinho-config full-width" id="appointmentClubinhoFields" hidden>
                       <div class="slot-picker-block">
                         <span class="mini-label slot-picker-label">Banho do ciclo</span>
-                        <div class="slot-picker" id="appointmentClubinhoSlot"></div>
-                        <input type="hidden" name="clubinho_slot" id="appointmentClubinhoSlotInput">
+                        <div class="slot-picker">
+                          <select name="clubinho_slot" id="appointmentClubinhoSlotInput"></select>
+                        </div>
                       </div>
                       <div class="helper-block clubinho-amount-card">
                         <span class="mini-label">Cobrança automática</span>

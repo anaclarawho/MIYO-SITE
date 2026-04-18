@@ -196,7 +196,6 @@ const DOM = {
   appointmentClubinhoToggleWrap: document.querySelector("#appointmentClubinhoToggleWrap"),
   appointmentClubinhoInput: document.querySelector("#appointmentClubinhoInput"),
   appointmentClubinhoFields: document.querySelector("#appointmentClubinhoFields"),
-  appointmentClubinhoSlot: document.querySelector("#appointmentClubinhoSlot"),
   appointmentClubinhoSlotInput: document.querySelector("#appointmentClubinhoSlotInput"),
   appointmentClubinhoAmountHint: document.querySelector("#appointmentClubinhoAmountHint"),
   agendaDateFilter: document.querySelector("#agendaDateFilter"),
@@ -530,8 +529,10 @@ function formatLongDate(value) {
 }
 
 function asDateOnly(value) {
-  if (!value) return new Date(`${todayKey()}T12:00:00`);
-  return new Date(String(value).includes("T") ? value : `${value}T12:00:00`);
+  const fallback = new Date(`${todayKey()}T12:00:00`);
+  if (!value) return fallback;
+  const candidate = new Date(String(value).includes("T") ? value : `${value}T12:00:00`);
+  return Number.isNaN(candidate.getTime()) ? fallback : candidate;
 }
 
 function clubinhoPlanConfig(planKey) {
@@ -1095,9 +1096,14 @@ function filteredAppointments() {
 
 function clubinhoCycleForPet(pet, referenceDate = new Date()) {
   if (!pet?.clubinho_enabled) return null;
-  let start = asDateOnly(pet.clubinho_adhesion_date || pet.registration_date || todayKey());
+
+  const baseDate = pet.clubinho_adhesion_date
+    || pet.registration_date
+    || localDateKeyFromValue(pet.created_at || new Date().toISOString());
+  let start = asDateOnly(baseDate);
   let end = addPlanInterval(start, pet.clubinho_plan, 1);
-  const reference = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+  const referenceCandidate = referenceDate instanceof Date ? new Date(referenceDate) : new Date(referenceDate);
+  const reference = Number.isNaN(referenceCandidate.getTime()) ? new Date() : referenceCandidate;
 
   while (reference >= end) {
     start = end;
@@ -1112,7 +1118,7 @@ function clubinhoCycleForPet(pet, referenceDate = new Date()) {
   return {
     start,
     end,
-    label: `${formatDate(start.toISOString())} até ${formatDate(addDays(end, -1).toISOString())}`,
+    label: `${formatDate(localDateKeyFromValue(start))} até ${formatDate(localDateKeyFromValue(addDays(end, -1)))}`,
   };
 }
 
@@ -1339,32 +1345,31 @@ function syncAppointmentPetSelection({ commit = false } = {}) {
 
 function populateClubinhoSlotOptions(pet) {
   const plan = clubinhoPlanConfig(pet?.clubinho_plan);
-  const summary = clubinhoProgress(pet);
   const slotCount = Number(plan.bathSlots) || 0;
-  const suggestedSlot = Math.min(summary.bathDone + 1, slotCount || 1);
-  DOM.appointmentClubinhoSlot.textContent = "";
+  let suggestedSlot = 1;
 
-  Array.from({ length: slotCount }, (_item, index) => {
-    const order = index + 1;
-    const value = `${order}\u00BA banho do ciclo`;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "slot-chip";
-    button.setAttribute("data-slot-value", value);
-    button.textContent = value;
-    if (order === suggestedSlot) {
-      button.classList.add("is-active");
-    }
-    DOM.appointmentClubinhoSlot.appendChild(button);
-    return button;
-  });
+  try {
+    const summary = clubinhoProgress(pet);
+    suggestedSlot = Math.min(summary.bathDone + 1, slotCount || 1);
+  } catch (error) {
+    console.warn("Nao consegui calcular o proximo banho do ciclo.", error);
+  }
 
-  if (!DOM.appointmentClubinhoSlot.childElementCount) {
-    DOM.appointmentClubinhoSlot.innerHTML = `<span class="field-hint">Escolha um pet do clubinho para ver os banhos do ciclo.</span>`;
+  if (!slotCount) {
+    DOM.appointmentClubinhoSlotInput.innerHTML = `<option value="">Nenhum banho configurado</option>`;
     DOM.appointmentClubinhoSlotInput.value = "";
+    DOM.appointmentClubinhoSlotInput.disabled = true;
     return;
   }
 
+  DOM.appointmentClubinhoSlotInput.innerHTML = Array.from({ length: slotCount }, (_item, index) => {
+    const order = index + 1;
+    const value = `${order}\u00BA banho do ciclo`;
+    const selected = order === suggestedSlot ? " selected" : "";
+    return `<option value="${value}"${selected}>${value}</option>`;
+  }).join("");
+
+  DOM.appointmentClubinhoSlotInput.disabled = false;
   DOM.appointmentClubinhoSlotInput.value = `${suggestedSlot}\u00BA banho do ciclo`;
 }
 
@@ -1444,8 +1449,9 @@ function syncAppointmentClubinhoUI() {
     DOM.appointmentClubinhoInput.checked = false;
     DOM.appointmentClubinhoFields.hidden = true;
     DOM.appointmentAmountField.hidden = false;
-    DOM.appointmentClubinhoSlot.innerHTML = "";
+    DOM.appointmentClubinhoSlotInput.innerHTML = "";
     DOM.appointmentClubinhoSlotInput.value = "";
+    DOM.appointmentClubinhoSlotInput.disabled = true;
     return;
   }
 
@@ -2349,7 +2355,11 @@ function bindEvents() {
     DOM.appointmentAmountField.hidden = enabled;
     if (enabled && pet) {
       populateClubinhoSlotOptions(pet);
+      return;
     }
+    DOM.appointmentClubinhoSlotInput.innerHTML = "";
+    DOM.appointmentClubinhoSlotInput.value = "";
+    DOM.appointmentClubinhoSlotInput.disabled = true;
   });
   DOM.serviceSelectInput.addEventListener("change", () => addServiceItem(DOM.serviceSelectInput.value));
   DOM.serviceAddButton.addEventListener("click", () => addServiceItem(DOM.serviceSelectInput.value));
@@ -2405,15 +2415,6 @@ function bindEvents() {
     const removeServiceButton = event.target.closest("[data-remove-service]");
     if (removeServiceButton) {
       removeServiceItem(removeServiceButton.dataset.removeService);
-      return;
-    }
-
-    const slotButton = event.target.closest("[data-slot-value]");
-    if (slotButton) {
-      DOM.appointmentClubinhoSlotInput.value = slotButton.dataset.slotValue;
-      DOM.appointmentClubinhoSlot.querySelectorAll(".slot-chip").forEach((item) =>
-        item.classList.toggle("is-active", item === slotButton)
-      );
       return;
     }
 
