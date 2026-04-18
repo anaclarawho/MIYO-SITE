@@ -1,7 +1,9 @@
 const BOOTSTRAP = window.MIYO_CONFIG || {};
 const STORAGE_KEY = "miyo-local-v2";
 const CLOUD_KEY = "miyo-cloud-v1";
+const CLOUD_SNAPSHOT_KEY = "miyo-cloud-snapshot-v1";
 const CURRENCY = BOOTSTRAP.DEFAULT_CURRENCY || "BRL";
+const TOAST_COOLDOWN_MS = 2200;
 const SYNC_TABLES = ["pets", "appointments"];
 const SERVICE_OPTIONS = [
   "Banho",
@@ -261,6 +263,7 @@ const state = {
   supabase: null,
   session: null,
   cloudError: "",
+  lastToast: { key: "", time: 0 },
   authSubscription: null,
   deferredInstallPrompt: null,
   selectedPetId: null,
@@ -655,6 +658,12 @@ function petAvatarMarkup(pet) {
 }
 
 function notify(message, tone = "default") {
+  const key = `${tone}:${message}`;
+  const now = Date.now();
+  if (state.lastToast.key === key && now - state.lastToast.time < TOAST_COOLDOWN_MS) {
+    return;
+  }
+  state.lastToast = { key, time: now };
   const toast = document.createElement("div");
   toast.className = `toast ${tone}`.trim();
   toast.textContent = message;
@@ -851,6 +860,22 @@ function saveCloudConfig(config) {
   localStorage.setItem(CLOUD_KEY, JSON.stringify(config));
 }
 
+function readCloudSnapshot() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CLOUD_SNAPSHOT_KEY) || "null");
+    if (!parsed?.pets && !parsed?.appointments) {
+      return null;
+    }
+    return normalizeDb(parsed);
+  } catch {
+    return null;
+  }
+}
+
+function writeCloudSnapshot(db) {
+  localStorage.setItem(CLOUD_SNAPSHOT_KEY, JSON.stringify(normalizeDb(db)));
+}
+
 function cloudConfigured() {
   return Boolean(state.cloud.supabaseUrl && state.cloud.supabaseAnonKey);
 }
@@ -916,6 +941,7 @@ async function refreshData({ silent = false } = {}) {
         remote[table] = results[index];
       });
       state.data = sortDb(normalizeDb(remote));
+      writeCloudSnapshot(state.data);
       state.cloudError = "";
     } else {
       state.data = readLocalDb();
@@ -932,11 +958,20 @@ async function refreshData({ silent = false } = {}) {
   } catch (error) {
     console.error(error);
     if (loadingFromCloud) {
+      const cachedSnapshot = readCloudSnapshot();
+      if (cachedSnapshot) {
+        state.data = sortDb(cachedSnapshot);
+      }
       state.cloudError = humanizeErrorMessage(
         error,
         "Não consegui carregar seus dados da nuvem agora. Isso não significa que eles foram apagados.",
       );
-      notify(state.cloudError, "error");
+      notify(
+        cachedSnapshot
+          ? "Não consegui falar com a nuvem agora. Estou mostrando a última cópia sincronizada."
+          : state.cloudError,
+        cachedSnapshot ? "warning" : "error",
+      );
       return;
     }
 
@@ -2469,7 +2504,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260418-5", {
+    const registration = await navigator.serviceWorker.register("./sw.js?v=20260418-6", {
       updateViaCache: "none",
     });
     await registration.update();
