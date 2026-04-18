@@ -260,6 +260,7 @@ const state = {
   cloud: loadCloudConfig(),
   supabase: null,
   session: null,
+  cloudError: "",
   authSubscription: null,
   deferredInstallPrompt: null,
   selectedPetId: null,
@@ -906,16 +907,19 @@ async function fetchRemoteTable(table) {
 }
 
 async function refreshData({ silent = false } = {}) {
+  const loadingFromCloud = Boolean(state.supabase && state.session?.user);
   try {
-    if (state.supabase && state.session?.user) {
+    if (loadingFromCloud) {
       const remote = {};
       const results = await Promise.all(SYNC_TABLES.map((table) => fetchRemoteTable(table)));
       SYNC_TABLES.forEach((table, index) => {
         remote[table] = results[index];
       });
       state.data = sortDb(normalizeDb(remote));
+      state.cloudError = "";
     } else {
       state.data = readLocalDb();
+      state.cloudError = "";
     }
 
     if (!state.selectedPetId || !getPet(state.selectedPetId)) {
@@ -927,7 +931,17 @@ async function refreshData({ silent = false } = {}) {
     }
   } catch (error) {
     console.error(error);
+    if (loadingFromCloud) {
+      state.cloudError = humanizeErrorMessage(
+        error,
+        "Não consegui carregar seus dados da nuvem agora. Isso não significa que eles foram apagados.",
+      );
+      notify(state.cloudError, "error");
+      return;
+    }
+
     state.data = readLocalDb();
+    state.cloudError = "";
     notify("Usei o modo local porque a sincronização não respondeu.", "warning");
   }
 }
@@ -1870,7 +1884,14 @@ function renderClubinhoBoard() {
 function renderCloudState() {
   const cloudReady = cloudConfigured();
   const logged = Boolean(state.session?.user);
-  const storageLabel = logged ? "Nuvem sincronizada" : cloudReady ? "Supabase pronto" : "Local no navegador";
+  const syncFailed = Boolean(logged && state.cloudError);
+  const storageLabel = syncFailed
+    ? "Falha ao carregar nuvem"
+    : logged
+      ? "Nuvem sincronizada"
+      : cloudReady
+        ? "Supabase pronto"
+        : "Local no navegador";
   const authLabel = logged ? state.session.user.email || "Conta conectada" : "Sem login";
 
   if (DOM.storageModeBadge) DOM.storageModeBadge.textContent = storageLabel;
@@ -1878,13 +1899,15 @@ function renderCloudState() {
   DOM.cloudStorageState.textContent = storageLabel;
   DOM.cloudUserState.textContent = authLabel;
   if (DOM.cloudStateLabel) {
-    DOM.cloudStateLabel.textContent = logged ? "Sincronização ativa" : storageLabel;
+    DOM.cloudStateLabel.textContent = syncFailed ? "Sincronização com problema" : logged ? "Sincronização ativa" : storageLabel;
   }
-  DOM.cloudSummary.textContent = logged
-    ? "Seus dados já estão sendo sincronizados entre os dispositivos em que você entrar com esta conta."
-    : cloudReady
-      ? "A conexão com o Supabase está pronta."
-      : "Você já pode usar o MIYO no modo local.";
+  DOM.cloudSummary.textContent = syncFailed
+    ? state.cloudError
+    : logged
+      ? "Seus dados já estão sendo sincronizados entre os dispositivos em que você entrar com esta conta."
+      : cloudReady
+        ? "A conexão com o Supabase está pronta."
+        : "Você já pode usar o MIYO no modo local.";
   DOM.sidebarSummary.textContent = `${state.data.pets.length} pets • ${state.data.pets.filter((pet) => pet.clubinho_enabled).length} clubinho • ${state.data.appointments.length} atendimentos`;
   DOM.signOutButton.hidden = !logged;
   DOM.todayLabel.textContent = new Intl.DateTimeFormat("pt-BR", {
@@ -2295,7 +2318,10 @@ function bindEvents() {
   });
   DOM.serviceSelectInput.addEventListener("change", () => addServiceItem(DOM.serviceSelectInput.value));
   DOM.serviceAddButton.addEventListener("click", () => addServiceItem(DOM.serviceSelectInput.value));
-  DOM.syncButton.addEventListener("click", () => refreshData());
+  DOM.syncButton.addEventListener("click", async () => {
+    await refreshData();
+    renderAll();
+  });
   DOM.exportDataButton.addEventListener("click", exportCurrentData);
   DOM.importDataButton.addEventListener("click", () => DOM.importFileInput.click());
   DOM.importFileInput.addEventListener("change", handleImportFile);
@@ -2443,7 +2469,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260418-4", {
+    const registration = await navigator.serviceWorker.register("./sw.js?v=20260418-5", {
       updateViaCache: "none",
     });
     await registration.update();
