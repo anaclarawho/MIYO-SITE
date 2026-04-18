@@ -520,15 +520,22 @@ button {
 }
 
 .slot-picker {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: start;
   gap: 10px;
+  min-height: 42px;
   overflow-x: auto;
   padding-bottom: 4px;
   scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .slot-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
   min-height: 42px;
   padding: 0 14px;
@@ -538,6 +545,7 @@ button {
   color: var(--brand-deep);
   font-size: 0.86rem;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .slot-chip.is-active {

@@ -1292,13 +1292,24 @@ function populateClubinhoSlotOptions(pet) {
   const plan = clubinhoPlanConfig(pet?.clubinho_plan);
   const summary = clubinhoProgress(pet);
   const suggestedSlot = Math.min(summary.bathDone + 1, plan.bathSlots);
-  DOM.appointmentClubinhoSlot.innerHTML = Array.from({ length: plan.bathSlots }, (_item, index) => {
+  DOM.appointmentClubinhoSlot.replaceChildren();
+
+  Array.from({ length: plan.bathSlots }, (_item, index) => {
     const order = index + 1;
-    const value = `${order}º banho do ciclo`;
-    const isActive = order === suggestedSlot;
-    return `<button class="slot-chip ${isActive ? "is-active" : ""}" data-slot-value="${escapeHtml(value)}" type="button">${escapeHtml(value)}</button>`;
-  }).join("");
-  DOM.appointmentClubinhoSlotInput.value = `${suggestedSlot}º banho do ciclo`;
+    const value = `${order}\u00BA banho do ciclo`;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "slot-chip";
+    button.dataset.slotValue = value;
+    button.textContent = value;
+    if (order === suggestedSlot) {
+      button.classList.add("is-active");
+    }
+    DOM.appointmentClubinhoSlot.append(button);
+    return button;
+  });
+
+  DOM.appointmentClubinhoSlotInput.value = `${suggestedSlot}\u00BA banho do ciclo`;
 }
 
 function syncClubinhoFields({
@@ -2425,7 +2436,7 @@ async function registerServiceWorker() {
       window.location.reload();
     });
 
-    const registration = await navigator.serviceWorker.register("./sw.js?v=20260418-2", {
+    const registration = await navigator.serviceWorker.register("./sw.js?v=20260418-3", {
       updateViaCache: "none",
     });
     await registration.update();
